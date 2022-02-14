@@ -20,6 +20,8 @@
 #' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
 #' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
 #'
+#' @importFrom magrittr %>%
+#'
 #' @export
 #'
 per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
