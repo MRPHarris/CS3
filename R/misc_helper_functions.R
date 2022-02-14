@@ -53,6 +53,13 @@ ssc_more_int <- function (mat1, mat2, tcc = FALSE) {
 #' @param pfmodel a PARAFAC model object from staRdom::eem_parafaC()
 #' @param component numeric. Target component.
 #'
+#' @importFrom dplyr bind_rows
+#' @importFrom dplyr mutate_at
+#' @importFrom dplyr mutate
+#' @importFrom dplyr vars
+#' @importFrom dplyr group_by
+#' @importFrom dplyr ungroup
+#'
 #' @noRd
 #'
 extrpf_peak_spectra_int <- function(pfmodel, component = 1){
@@ -95,6 +102,15 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
 #' @param denormalise is the PARAFAC model normalised? If so, use the eemlist to denormalise the loadings. Shouldn't have an influence on similarity scores.
 #' @param extend_eemlist TRUE/FALSE to ensure equal EEM sizes before calculations. Uses staRdom::eem_extend2largest if differences are found.
 #' @param verbose return various messages during operation.
+#'
+#' @importFrom eemR eem_extract
+#' @importFrom tibble column_to_rownames
+#' @importFrom dplyr mutate_all
+#' @importFrom staRdom eem_names
+#' @importFrom staRdom A_missing
+#' @importFrom dplyr mutate
+#' @importFrom tidyr gather
+#' @importFrom dplyr bind_rows
 #'
 #' @noRd
 #'
@@ -167,6 +183,11 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
 #' @param ex an excitation wavelength value, in nm
 #' @param em an emission wavelength value, in nm
 #'
+#' @importFrom tidyr pivot_longer
+#' @importFrom dplyr mutate_at
+#' @importFrom dplyr vars
+#'
+#'
 #' @noRd
 #'
 slice_eem_int <- function(eem, ex, em){
@@ -185,7 +206,7 @@ slice_eem_int <- function(eem, ex, em){
     colnames(em_slice) <- c("emission", "intensity")
     em_slice <- pivot_longer(em_slice, cols = emission, values_to = "wavelength")
   } else {
-    ex <- binary_search_nearest(data = colnames(eem_df), value = ex)
+    ex <- binary_search_nearest_int(data = colnames(eem_df), value = ex)
     em_slice <- data.frame(matrix(NA, nrow = nrow(eem_df), ncol = 2))
     em_slice[, 1] <- as.numeric(rownames(eem_df))
     em_slice[, 2] <- as.numeric(as.matrix(eem_df[, which(colnames(eem_df) == ex)]))
@@ -202,7 +223,7 @@ slice_eem_int <- function(eem, ex, em){
     ex_slice <- pivot_longer(ex_slice, cols = excitation, values_to = "wavelength")
   } else {
     # Oh no! Find nearest em value with binary search via data.table.
-    em <- binary_search_nearest(data = rownames(eem_df), value = em)
+    em <- binary_search_nearest_int(data = rownames(eem_df), value = em)
     ex_slice <- data.frame(matrix(NA, nrow = ncol(eem_df), ncol = 2))
     ex_slice[, 1] <- as.numeric(colnames(eem_df))
     ex_slice[, 2] <- as.numeric(as.matrix(t(eem_df[which(rownames(eem_df) == em), ])))
@@ -224,6 +245,8 @@ slice_eem_int <- function(eem, ex, em){
 #' @param pfmodel a PARAFAC model object, typically an individual ouptut from staRdom::eem_parafaC()
 #' @param eemlist a list of eem objects compliant with the staRdom/eemR framework
 #' @param type short or long format. Short by default. Long format data works better for grouping in ggplot
+#'
+#' @importFrom tidyr pivot_longer
 #'
 #' @noRd
 #'

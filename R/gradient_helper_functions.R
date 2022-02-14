@@ -12,6 +12,8 @@
 #' @param mat a data.matrix
 #' @param tolerance a decimal representing percentage tolerance. 0.01 (1%) by default.
 #'
+#' @importFrom stats smooth
+#'
 #' @noRd
 #'
 get_gradient_vals <- function(mat, tolerance = 0.01){
@@ -100,6 +102,11 @@ nsegments <- function(grads){
 #'
 #' @param data a vector of numeric values to search within
 #' @param value to drive binary search. i.e. output will be closest value to this input.
+#'
+#' @importFrom data.table data.table
+#' @importFrom data.table setattr
+#' @importFrom data.table setkey
+#' @importFrom data.table J
 #'
 #' @noRd
 #'

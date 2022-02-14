@@ -7,6 +7,9 @@
 #' @param matrix a data.matrix with wavelengths as rownames
 #' @param mat_out TRUE/FALSE to output a matrix of identical format to the input (i.e. a data.matrix with the wavelengths as the rownames)
 #'
+#' @importFrom stats approx
+#' @importFrom tibble column_to_rownames
+#'
 #' @noRd
 #'
 interpolate_matrix_1nm <- function(mat, mat_out = FALSE){
@@ -46,6 +49,12 @@ interpolate_matrix_1nm <- function(mat, mat_out = FALSE){
 #' @param output_mat TRUE/FALSE to output either a simple matrix object used by other functions, or a longer form output.
 #' @param neg_to_0 TRUE/FALSE to set all values of negative fluoresence to 0 after subtraction.
 #' @param radd_nontarget TRUE/FALSE to add residuals and target component spectra to the output. Only applies if output_mat = FALSE.
+#'
+#' @importFrom tidyr pivot_wider
+#' @importFrom dplyr mutate
+#' @importFrom dplyr across
+#' @importFrom dplyr select
+#' @importFrom dplyr bind_rows
 #'
 #' @noRd
 #'
@@ -113,6 +122,8 @@ comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
 #' @param p filter order. See ?signal::sgolayfilt
 #' @param n window filter size (must be odd). See ?signal::sgolayfilt
 #' @param ... arguments passed on to signal::sgolayfilt
+#'
+#' @importFrom signal sgolayfilt
 #'
 #' @noRd
 #'

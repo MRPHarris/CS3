@@ -21,6 +21,10 @@
 #' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
 #'
 #' @importFrom magrittr %>%
+#' @importFrom dplyr select
+#' @importFrom dplyr mutate_at
+#' @importFrom dplyr vars
+#' @importFrom utils data
 #'
 #' @export
 #'
