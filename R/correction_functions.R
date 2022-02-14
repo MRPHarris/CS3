@@ -198,10 +198,12 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
       secondary_spectra <- lapply(matrices, function(mat){
         mat_new <- data.matrix(mat[which(rownames(mat) == starting_wavelength):nrow(mat),])
       })
+      names(secondary_spectra) <- c("mat1","mat2")
       secondary_spectra
     } else if(length(missing) == 2){
       # No troughs.
       secondary_spectra <- list(mat1,mat2)
+      names(secondary_spectra) <- c("mat1","mat2")
       secondary_spectra
     }
   } else {
@@ -213,6 +215,7 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
       mat_new <- data.matrix(mat[which(rownames(mat) == starting_wavelength):nrow(mat),])
     })
     # Return
+    names(secondary_spectra) <- c("mat1","mat2")
     secondary_spectra
   }
 }

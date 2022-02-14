@@ -10,7 +10,7 @@ CS3 is a work-in-progress package to facilitate straightforward PARAFAC model ve
 
 Code relates to the manuscript titled *Component-vs-sample similarity as a diagnostic tool for inadequate model fitting in EEM-PARAFAC analysis.*
 
-The current github repo is https://github.com/MRPHarris/CS3
+The current github repo is https://github.com/MRPHarris/CS3.
 
 ### Package framework
 
@@ -40,7 +40,6 @@ Murphy, K. R., Stedmon, C. A., Graeber, D. and Bro, R.: Fluorescence spectroscop
 
 The function was then extracted from drEEM in MATLAB using <open RamanIntegrationRange.m>
 Code was then ported to R, using equivalent commands. e.g. forecast::ma() instead of smooth(). Where it was possible, functions that preserved the 'style' of the code were used. E.g. discrete numerical gradient with `pracma::gradient()`
-
 
 #### References
 

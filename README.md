@@ -9,7 +9,7 @@ model verification.
 Code relates to the manuscript titled *Component-vs-sample similarity as
 a diagnostic tool for inadequate model fitting in EEM-PARAFAC analysis.*
 
-The current github repo is <https://github.com/MRPHarris/CS3>
+The current github repo is <https://github.com/MRPHarris/CS3>.
 
 ### Package framework
 
