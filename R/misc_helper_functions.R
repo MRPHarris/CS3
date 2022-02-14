@@ -12,7 +12,7 @@
 #' @param mat2 a matrix
 #' @param tcc TRUE/FALSE to return only TCC value instead of SSC, alpha and beta.
 #'
-#' @export
+#' @noRd
 #'
 ssc_more_int <- function (mat1, mat2, tcc = FALSE) {
   if (any(is.null(mat1), is.na(mat1), is.null(mat2), is.na(mat2))) {
@@ -225,7 +225,7 @@ slice_eem_int <- function(eem, ex, em){
 #' @param eemlist a list of eem objects compliant with the staRdom/eemR framework
 #' @param type short or long format. Short by default. Long format data works better for grouping in ggplot
 #'
-#' @export
+#' @noRd
 #'
 extrpf_loadings_denorm_int <- function(pfmodel, eemlist, type = "short"){
   maxvals <- eemlist_fmax_values(eemlist)
