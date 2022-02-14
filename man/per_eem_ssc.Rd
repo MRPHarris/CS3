@@ -14,7 +14,8 @@ per_eem_ssc(
   interp_1nm = "all",
   smooth_sg = "all",
   complete_peak = "ex",
-  verbose = FALSE
+  verbose = FALSE,
+  denormalise_residuals = FALSE
 )
 }
 \arguments{
@@ -36,7 +37,9 @@ per_eem_ssc(
 
 \item{complete_peak}{either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term}
 
-\item{verbose}{TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding}
+\item{verbose}{TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.}
+
+\item{denormalise_residuals}{TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.}
 }
 \description{
 Extract the spectra from a PARAFAC model (B and C mode loadings) and compare them with underlying
