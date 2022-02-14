@@ -1,8 +1,5 @@
 # Here lies the main function in the CS3 package.
-
-# Originally called 'per-eem SSC', the function compares PARAFAC spectra with underlying sample
-# spectra at the target peak coordinates. Various corrections may be applied to the data.
-
+# The function compares PARAFAC spectra with underlying sample spectra at the target peak coordinates using spectral similarity metrics (TCC and/or SSC). Various corrections may be applied to the data.
 # The function is written with the goal of being understandable - it is certainly not optimised for speed/efficiency.
 
 #' Compare PARAFAC and EEM spectra with spectral similarity metrics
@@ -11,15 +8,16 @@
 #'       sample data. Various options exist for corrections, including adjusting excitation spectra so that SSC might
 #'       be applied rather than just TCC.
 #'
-#' @param pfmodel A PARAFAC model object. An output from staRdom::eem_parafac()
-#' @param eemlist A group of EEMs compliant with the staRdom/EEM/eemR package framework
-#' @param comp Numeric, singular - the target component for comparisons.
-#' @param tcc TRUE/FALSE to extract only TCC rather than SSC.
-#' @param terms TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC.
-#' @param spectral_correct Either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified.
-#' @param interp_1nm Either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction.
-#' @param smooth_sg Either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra.
-#' @param secondary_peak Either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term.
+#' @param pfmodel a PARAFAC model object. An output from staRdom::eem_parafac()
+#' @param eemlist a group of EEMs compliant with the staRdom/EEM/eemR package framework
+#' @param comp numeric, singular - the target component for comparisons
+#' @param tcc TRUE/FALSE to extract only TCC rather than SSC
+#' @param terms TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC
+#' @param spectral_correct either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified
+#' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
+#' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra
+#' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term
+#' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding
 #'
 #' @export
 #'
@@ -27,10 +25,10 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
                         spectral_correct = "all",
                         interp_1nm = "all",
                         smooth_sg = "all",
-                        secondary_peak = "ex",
+                        complete_peak = "ex",
                         verbose = FALSE){
   # get PARAFAC spectra
-  pf_peak_spectra <- extrpf_peak_spectra(pfmodel, component = comp)
+  pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
   # get PARAFAC Emission 'B' mode - emission
   mat_pf_em_main <- as.matrix(pfmodel$B[,comp])
   # get PARAFAC Excitation 'C' mode - excitation
@@ -61,7 +59,7 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
   # If correcting spectra, extract the residuals and ex/em grobs.
   if(!is.null(spectral_correct)){
     message("Removing contribution of other components. Extracting residuals...")
-    residuals <- eempf_residuals_mod(pfmodel = pfmodel, eem_list = eemlist,
+    residuals <- extrpf_residuals_int(pfmodel = pfmodel, eem_list = eemlist,
                                      denormalise = TRUE, verbose = verbose)
     # Get the grobs for ex and em
     grob_ex <- residuals[which(residuals$em == target_em),]
@@ -83,14 +81,14 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
     colnames(SSC_table) <- c("sample","emission","excitation")
     SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
   }
-  # Calculate SSCs for each EEM.
+  # Calculate metrics for each EEM.
   for(e in seq_along(eemlist)){
     # For this EEM, pull out the emission and excitation slices.
     target_eem <- eemlist[[e]]
     name <- target_eem$sample
-    mat_pf_em <- mat_pf_em_main
+    mat_pf_em <- mat_pf_em_main # reassign the pf spectra to ensure no modification between loops
     mat_pf_ex <- mat_pf_ex_main
-    eem_slice <- eemUtils::slice_eem(eem = target_eem, ex = target_ex, em = target_em)
+    eem_slice <- slice_eem_int(eem = target_eem, ex = target_ex, em = target_em)
     mat_em_it <- eem_slice %>%
       dplyr::filter(name == "emission") %>%
       tibble::column_to_rownames('wavelength') %>%
@@ -131,36 +129,37 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
     }
     # Correction step 3: smoothing with Savitzky-Golay filter
     if(!isTRUE(smooth_sg)){
+      data("sg_terms_deftab")
       if(smooth_sg == "ex"){
-        mat_ex_it <- sg_smooth(mat = mat_ex_it, n = 11)
+        mat_ex_it <- sg_smooth(mat = mat_ex_it,  n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
       } else if(smooth_sg == "em"){
-        mat_em_it <- sg_smooth(mat = mat_em_it, n = 21)
+        mat_em_it <- sg_smooth(mat = mat_em_it,  n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
       } else if(smooth_sg == "all"){
-        mat_ex_it <- sg_smooth(mat = mat_ex_it, n = 11)
-        mat_em_it <- sg_smooth(mat = mat_em_it, n = 21)
+        mat_ex_it <- sg_smooth(mat = mat_ex_it,  n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
+        mat_em_it <- sg_smooth(mat = mat_em_it,  n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
       } else {
         stop("Please specify smooth_sg as NULL, 'ex', 'em' or 'all'")
       }
     }
     # Secondary peak handling. Gradient peak detection to remove incomplete peaks.
-    if(!is.null(secondary_peak)){
-      if(secondary_peak == "ex"){
-        ex_mats <- extract_secondary_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
+    if(!is.null(complete_peak)){
+      if(complete_peak == "ex"){
+        ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
         mat_pf_ex <- ex_mats$mat1
         mat_ex_it <- ex_mats$mat2
-      } else if(secondary_peak == "em"){
-        em_mats <- extract_secondary_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
+      } else if(complete_peak == "em"){
+        em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
         mat_pf_em <- em_mats$mat1
         mat_em_it <- em_mats$mat2
-      } else if(secondary_peak == "all"){
-        em_mats <- extract_secondary_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
+      } else if(complete_peak == "all"){
+        em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
         mat_pf_em <- em_mats$mat1
         mat_em_it <- em_mats$mat2
-        ex_mats <- extract_secondary_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
+        ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
         mat_pf_ex <- ex_mats$mat1
         mat_ex_it <- ex_mats$mat2
       } else {
-        stop("Please specify secondary_peak as NULL, 'ex', 'em' or 'all'")
+        stop("Please specify complete_peak as NULL, 'ex', 'em' or 'all'")
       }
     }
     # Populating SSC table.
