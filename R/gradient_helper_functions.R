@@ -106,7 +106,6 @@ nsegments <- function(grads){
 #' @importFrom data.table data.table
 #' @importFrom data.table setattr
 #' @importFrom data.table setkey
-#' @importFrom data.table J
 #'
 #' @noRd
 #'

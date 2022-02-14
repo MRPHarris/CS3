@@ -106,7 +106,7 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
 #' @importFrom eemR eem_extract
 #' @importFrom tibble column_to_rownames
 #' @importFrom dplyr mutate_all
-#' @importFrom staRdom eem_names
+#' @importFrom eemR eem_names
 #' @importFrom staRdom A_missing
 #' @importFrom dplyr mutate
 #' @importFrom tidyr gather
@@ -186,7 +186,7 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr mutate_at
 #' @importFrom dplyr vars
-#'
+#' @importFrom stats setNames
 #'
 #' @noRd
 #'
