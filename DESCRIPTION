@@ -20,7 +20,8 @@ Imports:
   dplyr,
   magrittr,
   pracma,
-  data.table
+  data.table,
+  signal
 Depends:
   R (>= 3.1)
 Roxygen: list(markdown = TRUE)

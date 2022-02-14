@@ -1,6 +1,50 @@
-# Miscellaneous helper functions. Used mostly to extract model data.
+# Miscellaneous functions. Used mostly to extract model data.
 # Many are adaptations of code from the staRdom package (Pucher et al., 2019).
 # Some others are borrowed from my own package for convenience and to avoid dependency on that package, which I do not plan to list on CRAN: https://github.com/MRPHarris/eemUtils
+
+#' Get SSC along with alpha and beta penalty terms
+#'
+#' @description The shift- and shape sensitive congruence (SSC) was developed by Wunsch et al., 2019 as an improvement
+#'      upon the TCC metric. It incorporates two penalty terms, alpha and beta, to account for differences in the wavelength
+#'      peak position and area. This function adds these terms to the data frame returned by staRdom::ssc(). Code from https://github.com/MRPHarris/eemUtils.
+#'
+#' @param mat1 a matrix
+#' @param mat2 a matrix
+#' @param tcc TRUE/FALSE to return only TCC value instead of SSC, alpha and beta.
+#'
+#' @export
+#'
+ssc_more_int <- function (mat1, mat2, tcc = FALSE) {
+  if (any(is.null(mat1), is.na(mat1), is.null(mat2), is.na(mat2))) {
+    a <- NA
+  } else {
+    a <- lapply(1:ncol(mat1), function(nc) {
+      col1 <- mat1[, nc]
+      apply(mat2, 2, function(col2) {
+        tcc_cal <- sum(col1 * col2)/sqrt(sum(col1^2) *
+                                           sum(col2^2))
+        if (!tcc) {
+          wl <- as.numeric(names(col1))
+          if (any(is.na(wl)) | pracma::isempty(wl)) {
+            stop("SSCs cannot be calculated. Please add wavelengths as rownames of the matrices!")
+          }
+          alpha <- abs((wl[which.max(col1)] - wl[which.max(col2)])/diff(range(wl)))
+          beta <- abs((sum(col1/max(col1)) - sum(col2/max(col2)))/diff(range(wl)))
+          ssc <- tcc_cal - alpha - beta
+          ssc <- c(ssc, alpha, beta)
+          # rownames(a) <- (c("ssc","alpha","beta"))
+        } else {
+          tcc_cal
+        }
+      })
+    }) %>% setNames(colnames(mat1)) %>% do.call(rbind, .)
+  }
+  attr(a, "method") <- ifelse(tcc, "TCC", "SSC")
+  if(!isTRUE(tcc)){
+    rownames (a) <- c("ssc","alpha","beta")
+  }
+  a
+}
 
 #' Extract spectra at the peak wavelength position.
 #'
@@ -67,7 +111,7 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
   }
   # revised normalisation
   if(isTRUE(denormalise)){
-    pfmodel$A <- extrpf_loadings_denorm(pfmodel, eemlist = eem_list) %>%
+    pfmodel$A <- extrpf_loadings_denorm_int(pfmodel, eemlist = eem_list) %>%
       column_to_rownames(var = 'sample') %>%
       mutate_all(as.numeric)
   }
@@ -114,7 +158,6 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
     res2 <- bind_rows(list(comps, samp, res)) %>% mutate(sample = sample)
   }) %>% bind_rows()
 }
-
 
 #' Extract spectra from an EEM at a given Ex/Em wavelength.
 #'
@@ -171,3 +214,37 @@ slice_eem_int <- function(eem, ex, em){
   slices %>% mutate_at(vars(intensity, wavelength), as.numeric)
   slices
 }
+
+#' Multiply the loadings values of PARAFAC components by normalisation factors
+#'
+#' @description A PARAFAC model fed with normalised eems outputs by default loadings that are less useful for direct
+#'       sample-to-sample comparison. This can be remedied by multiplying the loadings by each eem fmax value (i.e. the
+#'       normalisation factors used to normalise the eems originally). Originally from https://github.com/MRPHarris/eemUtils.
+#'
+#' @param pfmodel a PARAFAC model object, typically an individual ouptut from staRdom::eem_parafaC()
+#' @param eemlist a list of eem objects compliant with the staRdom/eemR framework
+#' @param type short or long format. Short by default. Long format data works better for grouping in ggplot
+#'
+#' @export
+#'
+extrpf_loadings_denorm_int <- function(pfmodel, eemlist, type = "short"){
+  maxvals <- eemlist_fmax_values(eemlist)
+  fm <- extrpf_loadings(pfmodel)
+  loadings_frame <- fm[,2:ncol(fm)]
+  newframe <- apply(loadings_frame, 2, function(col) {
+    col * maxvals
+  }) %>% data.frame()
+  newframe <- newframe %>% `colnames<-`(c(paste0("Comp.",
+                                                 seq(1, ncol(newframe), 1)))) %>% `rownames<-`(unlist(lapply(eemlist,
+                                                                                                             "[[", "sample"))) %>% rownames_to_column(var = "sample")
+  if (type == "short") {
+    newframe
+  }
+  else if (type == "long") {
+    newframe <- newframe %>% pivot_longer(cols = c(2:ncol(newframe)))
+  }
+  else {
+    stop("Unknown 'type'. Please input either 'short' or 'long'")
+  }
+}
+

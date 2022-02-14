@@ -172,7 +172,7 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
     mat <- matrices[[v]]
     neg_grads_it <- gradient_values[[v]][['neg']][!is.na(gradient_values[[v]][['neg']])]
     trough <- neg_grads_it[which(diff(neg_grads_it) != 1)]
-    trough_location <- binary_search_nearest(data = rownames(mat), value = trough)
+    trough_location <- binary_search_nearest_int(data = rownames(mat), value = trough)
     trough_wavelengths[[v]] <- trough_location
   }
   # Check that the trough exists. I.e., there is a number for both entries.

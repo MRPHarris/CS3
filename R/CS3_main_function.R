@@ -17,7 +17,8 @@
 #' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
 #' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra
 #' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term
-#' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding
+#' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
+#' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
 #'
 #' @export
 #'
@@ -26,7 +27,8 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
                         interp_1nm = "all",
                         smooth_sg = "all",
                         complete_peak = "ex",
-                        verbose = FALSE){
+                        verbose = FALSE,
+                        denormalise_residuals = FALSE){
   # get PARAFAC spectra
   pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
   # get PARAFAC Emission 'B' mode - emission
@@ -60,7 +62,7 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
   if(!is.null(spectral_correct)){
     message("Removing contribution of other components. Extracting residuals...")
     residuals <- extrpf_residuals_int(pfmodel = pfmodel, eem_list = eemlist,
-                                     denormalise = TRUE, verbose = verbose)
+                                      denormalise = denormalise_residuals, verbose = verbose)
     # Get the grobs for ex and em
     grob_ex <- residuals[which(residuals$em == target_em),]
     grob_em <-  residuals[which(residuals$ex == target_ex),]
@@ -164,15 +166,15 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
     }
     # Populating SSC table.
     if(isTRUE(terms)){
-      ssc_more_em <-  ssc_more(mat_pf_em, mat_em_it, tcc = FALSE)
-      tcc_em <- ssc(mat_pf_em, mat_em_it, tcc = TRUE)
-      ssc_more_ex <-  ssc_more(mat_pf_ex, mat_ex_it, tcc = FALSE)
-      tcc_ex <- ssc(mat_pf_ex, mat_ex_it, tcc = TRUE)
+      ssc_more_em <-  ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE)
+      tcc_em <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = TRUE)
+      ssc_more_ex <-  ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE)
+      tcc_ex <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = TRUE)
       SSC_table[e,c("excitation_tcc", "excitation_ssc", "excitation_alpha", "excitation_beta")] <- c(tcc_ex,ssc_more_ex[1],ssc_more_ex[2],ssc_more_ex[3])
       SSC_table[e,c("emission_tcc", "emission_ssc", "emission_alpha", "emission_beta")] <- c(tcc_em,ssc_more_em[1],ssc_more_em[2],ssc_more_em[3])
     } else {
-      SSC_table[e,'emission'] <- ssc(mat_pf_em, mat_em_it, tcc = tcc)
-      SSC_table[e,'excitation'] <- ssc(mat_pf_ex, mat_ex_it, tcc = tcc)
+      SSC_table[e,'emission'] <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = tcc)
+      SSC_table[e,'excitation'] <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = tcc)
     }
     if(isTRUE(verbose)){
       message(name)
