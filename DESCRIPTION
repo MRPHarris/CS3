@@ -1,13 +1,13 @@
 Package: CS3
 Title: Component versus Sample Spectral Similarity for EEM-PARAFAC model verification
-Version: 0.0.0.9000
+Version: 0.1.1
 Authors@R: 
     person(given = "Matthew",
            family = "Harris",
            role = c("aut", "cre"),
            email = "m.r.p.harris@keele.ac.uk",
            comment = c(ORCID = "0000-0002-3726-2376"))
-Description: What the package does (one paragraph).
+Description: Straightforward utilisation of spectral similarity metrics (TCC, SCC) to directly compare the spectra of modelled components from a Parallel Factor Analysis with their constituent EEM data. 
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
