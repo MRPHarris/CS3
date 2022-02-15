@@ -153,13 +153,20 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
   # list matrices
   matrices <- list(mat1,mat2) %>%
     'names<-'(c("mat1","mat2"))
+  # Repeated, essential interpolation. Also formats matrix for gradient calcs.
   matrices_interpolated <- lapply(matrices, interpolate_matrix_1nm) %>%
     'names<-'(c("mat1","mat2"))
   # get gradient segments
   gradient_values <- lapply(matrices_interpolated, get_gradient_vals, tolerance = tolerance) %>%
     'names<-'(c("mat1","mat2"))
+  # Skip condition: if the matrix starts with positive gradients, it is skipped. Skipping occurs later by
+  # setting the trough value to NA.
+  skip_condition <- lapply(gradient_values, function(x){
+    checkval <- x$pos[min(which(!is.na(x$pos)))] < x$neg[min(which(!is.na(x$neg)))]
+  })
   # get number of segments per segment object
-  # In a typical, dual-peak scenario the EEM will feature two negative segments and one positive.
+  # In a typical  incomplete peak scenario the EEM will feature two negative segments and one positive.
+  # This code may be defunct; I certainly don't use it for anything other than a warning.
   segments <- lapply(gradient_values, nsegments)
   if(length(which(as.numeric(unlist(segments)) > 2)) > 0 & isTRUE(verbose)){
     message("More than 2 negative gradient sections. Either there's more than two peaks present, or the data is noisy (and you should increase the tolerance value).")
@@ -185,6 +192,11 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
     trough <- neg_grads_it[which(diff(neg_grads_it) != 1)]
     trough_location <- binary_search_nearest_int(data = rownames(mat), value = trough)
     trough_wavelengths[[v]] <- trough_location
+  }
+  # Skip handling for spectra that commence with positive gradients (in which case an incomplete peak cannot occur)
+  if(any(unlist(skip_condition))){
+    skip <- which(unlist(skip_condition))
+    trough_wavelengths[[skip]] <- NA
   }
   # Check that the trough exists. I.e., there is a number for both entries.
   troughs <- unlist(trough_wavelengths)
