@@ -196,7 +196,13 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
   # Skip handling for spectra that commence with positive gradients (in which case an incomplete peak cannot occur)
   if(any(unlist(skip_condition))){
     skip <- which(unlist(skip_condition))
-    trough_wavelengths[[skip]] <- NA
+    if(length(skip) == 2){
+      trough_wavelengths <- lapply(trough_wavelengths, function(x){x <- NA})
+    } else {
+      if(!is.na(trough_wavelengths[[skip]])){
+        trough_wavelengths[[skip]] <- NA
+      }
+    }
   }
   # Check that the trough exists. I.e., there is a number for both entries.
   troughs <- unlist(trough_wavelengths)
