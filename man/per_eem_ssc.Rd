@@ -10,6 +10,7 @@ per_eem_ssc(
   comp,
   tcc = FALSE,
   terms = TRUE,
+  modified_metrics = TRUE,
   spectral_correct = "all",
   interp_1nm = "all",
   smooth_sg = "all",
@@ -28,6 +29,8 @@ per_eem_ssc(
 \item{tcc}{TRUE/FALSE to extract only TCC rather than SSC}
 
 \item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
+
+\item{modified_metrics}{TRUE/FALSE to add the modified (ex + em combined) TCC and SSC metrics after Parr et al., 2014.}
 
 \item{spectral_correct}{either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified}
 

@@ -13,6 +13,7 @@
 #' @param comp numeric, singular - the target component for comparisons
 #' @param tcc TRUE/FALSE to extract only TCC rather than SSC
 #' @param terms TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC
+#' @param modified_metrics TRUE/FALSE to add the modified (ex + em combined) TCC and SSC metrics after Parr et al., 2014.
 #' @param spectral_correct either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified
 #' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
 #' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra
@@ -28,7 +29,10 @@
 #'
 #' @export
 #'
-per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
+per_eem_ssc <- function(pfmodel, eemlist, comp,
+                        tcc = FALSE,
+                        terms = TRUE,
+                        modified_metrics = TRUE,
                         spectral_correct = "all",
                         interp_1nm = "all",
                         smooth_sg = "all",
@@ -66,7 +70,10 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
   target_ex <- pf_peak_spectra$max_ex[1]
   # If correcting spectra, extract the residuals and ex/em grobs.
   if(!is.null(spectral_correct)){
-    message("Removing contribution of other components. Extracting residuals...")
+    if(isTRUE(verbose)){
+      message("Extracting residuals data for component overlap correction...")
+    }
+
     residuals <- extrpf_residuals_int(pfmodel = pfmodel, eem_list = eemlist,
                                       denormalise = denormalise_residuals, verbose = verbose)
     # Get the grobs for ex and em
@@ -83,10 +90,18 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
     types_pst <- paste(rep(cats, each = length(types)), types, sep = "_")
     SSC_table <- data.frame(matrix(NA, nrow = length(eemlist), ncol = length(types_pst)))
     colnames(SSC_table) <- types_pst
+    if(isTRUE(modified_metrics)){
+      SSC_table$mSSC <- NA
+      SSC_table$mTCC <- NA
+    }
     SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
   } else {
     SSC_table <- data.frame(matrix(NA,nrow = length(eemlist), ncol = 3))
     colnames(SSC_table) <- c("sample","emission","excitation")
+    if(isTRUE(modified_metrics)){
+      SSC_table$mSSC <- NA
+      SSC_table$mTCC <- NA
+    }
     SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
   }
   # Calculate metrics for each EEM.
@@ -178,9 +193,17 @@ per_eem_ssc <- function(pfmodel, eemlist, comp, tcc = FALSE, terms = TRUE,
       tcc_ex <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = TRUE)
       SSC_table[e,c("excitation_tcc", "excitation_ssc", "excitation_alpha", "excitation_beta")] <- c(tcc_ex,ssc_more_ex[1],ssc_more_ex[2],ssc_more_ex[3])
       SSC_table[e,c("emission_tcc", "emission_ssc", "emission_alpha", "emission_beta")] <- c(tcc_em,ssc_more_em[1],ssc_more_em[2],ssc_more_em[3])
+      if(isTRUE(modified_metrics)){
+        SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
+        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_ex))
+      }
     } else {
       SSC_table[e,'emission'] <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = tcc)
       SSC_table[e,'excitation'] <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = tcc)
+      if(isTRUE(modified_metrics)){
+        SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
+        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_ex))
+      }
     }
     if(isTRUE(verbose)){
       message(name)
