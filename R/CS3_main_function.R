@@ -17,7 +17,8 @@
 #' @param spectral_correct either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified
 #' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
 #' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra
-#' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term
+#' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.
+#' @param SSC_trim_method if !is.null(complete_peak), choose one of either 'mod_alpha' to alter the peak position penalty term, or 'trim_spectra' to remove the incomplete peak entirely
 #' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
 #' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
 #'
@@ -29,14 +30,16 @@
 #'
 #' @export
 #'
-per_eem_ssc <- function(pfmodel, eemlist, comp,
+per_eem_ssc <- function(pfmodel,
+                        eemlist,
+                        comp,
                         tcc = FALSE,
-                        terms = TRUE,
                         modified_metrics = TRUE,
                         spectral_correct = "all",
                         interp_1nm = "all",
                         smooth_sg = "all",
                         complete_peak = "ex",
+                        SSC_trim_method = 'mod_alpha',
                         verbose = FALSE,
                         denormalise_residuals = FALSE){
   # get PARAFAC spectra
@@ -73,9 +76,7 @@ per_eem_ssc <- function(pfmodel, eemlist, comp,
     if(isTRUE(verbose)){
       message("Extracting residuals data for component overlap correction...")
     }
-
-    residuals <- extrpf_residuals_int(pfmodel = pfmodel, eem_list = eemlist,
-                                      denormalise = denormalise_residuals, verbose = verbose)
+    residuals <- extrpf_residuals_int(pfmodel = pfmodel, eem_list = eemlist, denormalise = denormalise_residuals, verbose = verbose)
     # Get the grobs for ex and em
     grob_ex <- residuals[which(residuals$em == target_em),]
     grob_em <-  residuals[which(residuals$ex == target_ex),]
@@ -83,27 +84,17 @@ per_eem_ssc <- function(pfmodel, eemlist, comp,
       message("Residuals extracted.")
     }
   }
-  # Pre-allocate SSC table to be filled
-  if(isTRUE(terms)){
-    types <- c("tcc","ssc","alpha","beta")
-    cats <- c("excitation","emission")
-    types_pst <- paste(rep(cats, each = length(types)), types, sep = "_")
-    SSC_table <- data.frame(matrix(NA, nrow = length(eemlist), ncol = length(types_pst)))
-    colnames(SSC_table) <- types_pst
-    if(isTRUE(modified_metrics)){
-      SSC_table$mSSC <- NA
-      SSC_table$mTCC <- NA
-    }
-    SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
-  } else {
-    SSC_table <- data.frame(matrix(NA,nrow = length(eemlist), ncol = 3))
-    colnames(SSC_table) <- c("sample","emission","excitation")
-    if(isTRUE(modified_metrics)){
-      SSC_table$mSSC <- NA
-      SSC_table$mTCC <- NA
-    }
-    SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
+  # Fill SSC table
+  types <- c("tcc","ssc","alpha","beta")
+  cats <- c("excitation","emission")
+  types_pst <- paste(rep(cats, each = length(types)), types, sep = "_")
+  SSC_table <- data.frame(matrix(NA, nrow = length(eemlist), ncol = length(types_pst)))
+  colnames(SSC_table) <- types_pst
+  if(isTRUE(modified_metrics)){
+    SSC_table$mSSC <- NA
+    SSC_table$mTCC <- NA
   }
+  SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
   # Calculate metrics for each EEM.
   for(e in seq_along(eemlist)){
     # For this EEM, pull out the emission and excitation slices.
@@ -152,7 +143,7 @@ per_eem_ssc <- function(pfmodel, eemlist, comp,
     }
     # Correction step 3: smoothing with Savitzky-Golay filter
     if(!isTRUE(smooth_sg)){
-      data("sg_terms_deftab")
+      data("sg_terms_deftab") # default smoothing terms. Eventually tweakable (I hope)
       if(smooth_sg == "ex"){
         mat_ex_it <- sg_smooth(mat = mat_ex_it,  n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
       } else if(smooth_sg == "em"){
@@ -166,27 +157,47 @@ per_eem_ssc <- function(pfmodel, eemlist, comp,
     }
     # Secondary peak handling. Gradient peak detection to remove incomplete peaks.
     if(!is.null(complete_peak)){
-      if(complete_peak == "ex"){
-        ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
-        mat_pf_ex <- ex_mats$mat1
-        mat_ex_it <- ex_mats$mat2
-      } else if(complete_peak == "em"){
-        em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
-        mat_pf_em <- em_mats$mat1
-        mat_em_it <- em_mats$mat2
-      } else if(complete_peak == "all"){
-        em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
-        mat_pf_em <- em_mats$mat1
-        mat_em_it <- em_mats$mat2
-        ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
-        mat_pf_ex <- ex_mats$mat1
-        mat_ex_it <- ex_mats$mat2
+      # Note: if complete_peak is specified (i.e. not NULL), then the peak handling occurs in one of two ways, based upon the SSC_trim method var.
+      if(SSC_trim_method == 'mod_alpha'){
+        # The default (and recommended) method is to adjust the peak position calculation, rather than discarding spectra associated with an incomplete peak.
+        if(complete_peak == "ex"){
+          trough_val_ex <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it, return_trough = TRUE)
+        } else if(complete_peak == "em"){
+          trough_val_em <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it, return_trough = TRUE)
+        } else if(complete_peak == "all"){
+          trough_val_ex <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it, return_trough = TRUE)
+          trough_val_em <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it, return_trough = TRUE)
+        } else {
+          stop("Please specify complete_peak as NULL, 'ex', 'em' or 'all'")
+        }
+      } else if(SSC_trim_method == 'trim_spectra'){
+        # Alternatively, the 'original' method can be used, where incomplete peaks are simply removed altogether.
+        if(complete_peak == "ex"){
+          ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
+          mat_pf_ex <- ex_mats$mat1
+          mat_ex_it <- ex_mats$mat2
+        } else if(complete_peak == "em"){
+          em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
+          mat_pf_em <- em_mats$mat1
+          mat_em_it <- em_mats$mat2
+        } else if(complete_peak == "all"){
+          em_mats <- extract_complete_peak(mat1 = mat_pf_em, mat2 = mat_em_it)
+          mat_pf_em <- em_mats$mat1
+          mat_em_it <- em_mats$mat2
+          ex_mats <- extract_complete_peak(mat1 = mat_pf_ex, mat2 = mat_ex_it)
+          mat_pf_ex <- ex_mats$mat1
+          mat_ex_it <- ex_mats$mat2
+        } else {
+          stop("Please specify complete_peak as NULL, 'ex', 'em' or 'all'")
+        }
       } else {
-        stop("Please specify complete_peak as NULL, 'ex', 'em' or 'all'")
+        stop("Please specify SSC_trim_method as 'mod_alpha' or 'trim_spectra'")
       }
     }
     # Populating SSC table.
-    if(isTRUE(terms)){
+    # SSC table handling
+    if(SSC_trim_method == 'trim_peak' || is.null(SSC_trim_method)){
+      ## Use mats (trimmed or un-trimmed) to find the SSC value.
       ssc_more_em <-  ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE)
       tcc_em <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = TRUE)
       ssc_more_ex <-  ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE)
@@ -195,14 +206,30 @@ per_eem_ssc <- function(pfmodel, eemlist, comp,
       SSC_table[e,c("emission_tcc", "emission_ssc", "emission_alpha", "emission_beta")] <- c(tcc_em,ssc_more_em[1],ssc_more_em[2],ssc_more_em[3])
       if(isTRUE(modified_metrics)){
         SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
-        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_ex))
+        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_em))
       }
-    } else {
-      SSC_table[e,'emission'] <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = tcc)
-      SSC_table[e,'excitation'] <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = tcc)
+    } else if(SSC_trim_method == 'mod_alpha'){
+      # Modified alpha term calculation using the supplied trough value.
+      # Depending on which spectra may be trimmed.
+      if(complete_peak == "ex"){
+        ssc_more_ex <- ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE, alpha_start = trough_val_ex)
+        ssc_more_em <-  ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE)
+      } else if(complete_peak == "em"){
+        ssc_more_ex <- ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE)
+        ssc_more_em <- ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE, alpha_start = trough_val_em)
+      } else if(complete_peak == "all"){
+        ssc_more_ex <- ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE, alpha_start = trough_val_ex)
+        ssc_more_em <- ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE, alpha_start = trough_val_em)
+      } else {
+        stop("Please specify complete_peak as NULL, 'ex', 'em' or 'all'")
+      }
+      tcc_ex <- staRdom::ssc(mat_pf_ex, mat_ex_it, tcc = TRUE)
+      tcc_em <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = TRUE)
+      SSC_table[e,c("excitation_tcc", "excitation_ssc", "excitation_alpha", "excitation_beta")] <- c(tcc_ex,ssc_more_ex[1],ssc_more_ex[2],ssc_more_ex[3])
+      SSC_table[e,c("emission_tcc", "emission_ssc", "emission_alpha", "emission_beta")] <- c(tcc_em,ssc_more_em[1],ssc_more_em[2],ssc_more_em[3])
       if(isTRUE(modified_metrics)){
         SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
-        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_ex))
+        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_em))
       }
     }
     if(isTRUE(verbose)){

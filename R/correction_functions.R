@@ -146,10 +146,11 @@ sg_smooth <- function(mat, neg_to_0 = TRUE , p = 2, n = 21,...){
 #' @param mat2 a single spectra in the form of a data.matrix
 #' @param tolerance numeric decimal value representing percentage tolerance. 0.05 (5%) by default.
 #' @param verbose TRUE/FALSE to return various messages during operation.
+#' @param return_trough TRUE/FALSE to, instead of a trimmed spectra, return the trough value used to define the start of the trimmed spectra.
 #'
 #' @noRd
 #'
-extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE){
+extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE, return_trough = TRUE){
   # list matrices
   matrices <- list(mat1,mat2) %>%
     'names<-'(c("mat1","mat2"))
@@ -193,7 +194,7 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
     trough_location <- binary_search_nearest_int(data = rownames(mat), value = trough)
     trough_wavelengths[[v]] <- trough_location
   }
-  # Skip handling for spectra that commence with positive gradients (in which case an incomplete peak cannot occur)
+  ## Skip handling for spectra that commence with positive gradients (in which case an incomplete peak cannot occur)
   if(any(unlist(skip_condition))){
     skip <- which(unlist(skip_condition))
     if(length(skip) == 2){
@@ -204,37 +205,68 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE)
       }
     }
   }
-  # Check that the trough exists. I.e., there is a number for both entries.
-  troughs <- unlist(trough_wavelengths)
-  if(any(is.na(troughs))){
-    missing <- which(is.na(troughs))
-    if(length(missing) == 1){
-      # There's one trough. In this case, set the NA to 0 and carry on.
-      troughs[missing] <- 0 # set to 0; the max find below will ignore it.
-      ## find the greater of the two wavelengths.
-      starting_wavelength <- max(troughs)
+  ## Fork in the path: is this function returning the trough location, or spectra trimmed using said trough (if it exists)?
+  if(isTRUE(return_trough)){
+    ## RETURNING TROUGH LOCATION
+    # Return the trough location. If there's no trough in either spectra, return NA.
+    troughs <- unlist(trough_wavelengths)
+    if(any(is.na(troughs))){
+      missing <- which(is.na(troughs))
+      if(length(missing) == 1){
+        ## ONE TROUGH
+        # There's one trough. In this case, set the NA to 0 and carry on.
+        troughs[missing] <- 0 # set to 0; the max find below will ignore it.
+        ## find the greater of the two wavelengths.
+        trough_val <- max(troughs, na.rm = TRUE)
+        trough_val # return the trough wavelength value
+      } else if(length(missing) == 2){
+        ## NO TROUGHS
+        # No troughs, but returning the trough locations? NA, then.
+        trough_val <- NA
+        trough_val # return the trough wavelength value.
+      }
+    } else {
+      ## TWO TROUGHS
+      # Two troughs, get the greater one.
+      trough_val <- max(troughs, na.rm = TRUE) # Shouldn't be any NA values here, but just in case.
+      trough_val # return the trough wavelength value.
+    }
+  } else {
+    ## RETURNING THE TRIMMED SPECTRA.
+    # Return the trough location. If there's no trough in either spectra, return NA.
+    troughs <- unlist(trough_wavelengths)
+    if(any(is.na(troughs))){
+      missing <- which(is.na(troughs))
+      if(length(missing) == 1){
+        ## ONE TROUGH
+        # There's one trough. In this case, set the NA to 0 and carry on.
+        troughs[missing] <- 0 # set to 0; the max find below will ignore it.
+        ## find the greater of the two wavelengths.
+        starting_wavelength <- max(troughs)
+        secondary_spectra <- lapply(matrices, function(mat){
+          mat_new <- data.matrix(mat[which(rownames(mat) == starting_wavelength):nrow(mat),])
+        })
+        names(secondary_spectra) <- c("mat1","mat2")
+        secondary_spectra # Return trimmed spectra
+      } else if(length(missing) == 2){
+        ## NO TROUGHS
+        # No troughs. No trimming occurs; return the matrices untrimmed.
+        secondary_spectra <- list(mat1,mat2)
+        names(secondary_spectra) <- c("mat1","mat2")
+        secondary_spectra # Return untrimmed spectra
+      }
+    } else {
+      ## TWO TROUGHS
+      # Two troughs, get the greater one.
+      starting_wavelength <- max(troughs, na.rm = TRUE) # Shouldn't be any NA values here, but just in case.
+      # New spectra
       secondary_spectra <- lapply(matrices, function(mat){
         mat_new <- data.matrix(mat[which(rownames(mat) == starting_wavelength):nrow(mat),])
       })
+      # Return
       names(secondary_spectra) <- c("mat1","mat2")
-      secondary_spectra
-    } else if(length(missing) == 2){
-      # No troughs.
-      secondary_spectra <- list(mat1,mat2)
-      names(secondary_spectra) <- c("mat1","mat2")
-      secondary_spectra
+      secondary_spectra # Return trimmed spectra.
     }
-  } else {
-    # Two troughs, get the greater one.
-    ## find the greater of the two wavelengths.
-    starting_wavelength <- max(troughs)
-    # New spectra
-    secondary_spectra <- lapply(matrices, function(mat){
-      mat_new <- data.matrix(mat[which(rownames(mat) == starting_wavelength):nrow(mat),])
-    })
-    # Return
-    names(secondary_spectra) <- c("mat1","mat2")
-    secondary_spectra
   }
 }
 

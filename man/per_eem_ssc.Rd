@@ -9,12 +9,12 @@ per_eem_ssc(
   eemlist,
   comp,
   tcc = FALSE,
-  terms = TRUE,
   modified_metrics = TRUE,
   spectral_correct = "all",
   interp_1nm = "all",
   smooth_sg = "all",
   complete_peak = "ex",
+  SSC_trim_method = "mod_alpha",
   verbose = FALSE,
   denormalise_residuals = FALSE
 )
@@ -28,8 +28,6 @@ per_eem_ssc(
 
 \item{tcc}{TRUE/FALSE to extract only TCC rather than SSC}
 
-\item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
-
 \item{modified_metrics}{TRUE/FALSE to add the modified (ex + em combined) TCC and SSC metrics after Parr et al., 2014.}
 
 \item{spectral_correct}{either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified}
@@ -38,11 +36,15 @@ per_eem_ssc(
 
 \item{smooth_sg}{either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra}
 
-\item{complete_peak}{either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to remove the first incomplete peak from target spectra. Currently only tested on excitation spectra. Allows the SSC metric to be applied without incomplete peaks causing bias to the alpha penalty term}
+\item{complete_peak}{either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.}
+
+\item{SSC_trim_method}{if !is.null(complete_peak), choose one of either 'mod_alpha' to alter the peak position penalty term, or 'trim_spectra' to remove the incomplete peak entirely}
 
 \item{verbose}{TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.}
 
 \item{denormalise_residuals}{TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.}
+
+\item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
 }
 \description{
 Extract the spectra from a PARAFAC model (B and C mode loadings) and compare them with underlying

@@ -11,10 +11,11 @@
 #' @param mat1 a matrix
 #' @param mat2 a matrix
 #' @param tcc TRUE/FALSE to return only TCC value instead of SSC, alpha and beta.
+#' @param alpha_start NULL or a value to set the starting point for peak detection. If a numeric value is supplied, in nanometres, this will be set as the start of the search for the peak position in each spectra. If the value is NULL or NA, the operation is ignored.
 #'
 #' @noRd
 #'
-ssc_more_int <- function (mat1, mat2, tcc = FALSE) {
+ssc_more_int <- function (mat1, mat2, tcc = FALSE, alpha_start = NULL) {
   if (any(is.null(mat1), is.na(mat1), is.null(mat2), is.na(mat2))) {
     a <- NA
   } else {
@@ -28,7 +29,17 @@ ssc_more_int <- function (mat1, mat2, tcc = FALSE) {
           if (any(is.na(wl)) | pracma::isempty(wl)) {
             stop("SSCs cannot be calculated. Please add wavelengths as rownames of the matrices!")
           }
-          alpha <- abs((wl[which.max(col1)] - wl[which.max(col2)])/diff(range(wl)))
+          if(!is.null(alpha_start) && !is.na(alpha_start)){
+            if(!is.numeric(alpha_start)){
+              stop("The trough wavelength value used for the modified alpha calculation must be numeric.")
+            }
+            trough_ind <- as.numeric(which(wl == alpha_start))
+            wl_trim <- wl[trough_ind:length(wl)]
+            alpha <- abs((wl_trim[which.max(col1[trough_ind:length(col1)])] - wl_trim[which.max(col2[trough_ind:length(col2)])])/diff(range(wl)))
+          } else {
+            # Normal alpha calculation
+            alpha <- abs((wl[which.max(col1)] - wl[which.max(col2)])/diff(range(wl)))
+          }
           beta <- abs((sum(col1/max(col1)) - sum(col2/max(col2)))/diff(range(wl)))
           ssc <- tcc_cal - alpha - beta
           ssc <- c(ssc, alpha, beta)
