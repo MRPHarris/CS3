@@ -163,7 +163,11 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE,
   # Skip condition: if the matrix starts with positive gradients, it is skipped. Skipping occurs later by
   # setting the trough value to NA.
   skip_condition <- lapply(gradient_values, function(x){
-    checkval <- x$pos[min(which(!is.na(x$pos)))] < x$neg[min(which(!is.na(x$neg)))]
+    if(all(is.na(unlist(x)))){
+      checkval <- TRUE
+    } else {
+      checkval <- x$pos[min(which(!is.na(x$pos)))] < x$neg[min(which(!is.na(x$neg)))]
+    }
   })
   # get number of segments per segment object
   # In a typical  incomplete peak scenario the EEM will feature two negative segments and one positive.
@@ -182,8 +186,12 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE,
   counter <- 0
   secondary_peak_locations <- lapply(matrices, function(mat){
     counter <<- counter + 1
-    val <- binary_search_nearest_int(data = rownames(mat), value = max(gradient_values[[counter]][['pos']], na.rm = TRUE))
-    val
+    if(all(is.na(unlist(gradient_values[[counter]][['pos']])))){
+      val <- NA
+    } else {
+      val <- binary_search_nearest_int(data = rownames(mat), value = max(gradient_values[[counter]][['pos']], na.rm = TRUE))
+      val
+    }
   })
   ## trough locations. Looped; lapply wouldn't crack it.
   trough_wavelengths <- vector("list", length = 2)
