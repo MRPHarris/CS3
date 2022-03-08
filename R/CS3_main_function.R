@@ -228,8 +228,17 @@ per_eem_ssc <- function(pfmodel,
       SSC_table[e,c("excitation_tcc", "excitation_ssc", "excitation_alpha", "excitation_beta")] <- c(tcc_ex,ssc_more_ex[1],ssc_more_ex[2],ssc_more_ex[3])
       SSC_table[e,c("emission_tcc", "emission_ssc", "emission_alpha", "emission_beta")] <- c(tcc_em,ssc_more_em[1],ssc_more_em[2],ssc_more_em[3])
       if(isTRUE(modified_metrics)){
-        SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
-        SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_em))
+        # missing value handling to prevent the occurrence of positive value calculation were two negatives are supplied.
+        if((ssc_more_ex['ssc',1] < 0) || (ssc_more_em['ssc',1] < 0)){
+          SSC_table[e,'mSSC'] <- NA
+        } else {
+          SSC_table[e,'mSSC'] <- sqrt(as.numeric(ssc_more_ex['ssc',1]) * as.numeric(ssc_more_em['ssc',1]))
+        }
+        if((as.numeric(tcc_ex) < 0) || (as.numeric(tcc_em) < 0)){
+          SSC_table[e,'mTCC'] <- NA
+        } else {
+          SSC_table[e,'mTCC'] <- sqrt(as.numeric(tcc_ex) * as.numeric(tcc_em))
+        }
       }
     }
     if(isTRUE(verbose)){
