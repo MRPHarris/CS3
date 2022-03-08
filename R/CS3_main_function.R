@@ -21,6 +21,7 @@
 #' @param SSC_trim_method if !is.null(complete_peak), choose one of either 'mod_alpha' to alter the peak position penalty term, or 'trim_spectra' to remove the incomplete peak entirely
 #' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
 #' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
+#' @param exclude_negative_residuals TRUE/FALSE to set negative values to 0 during component overlap correction. Setting this to TRUE may inflate similarity scores in component:sample comparisons where the model has over-fitted the component.
 #'
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
@@ -41,7 +42,8 @@ per_eem_ssc <- function(pfmodel,
                         complete_peak = "ex",
                         SSC_trim_method = 'mod_alpha',
                         verbose = FALSE,
-                        denormalise_residuals = FALSE){
+                        denormalise_residuals = FALSE,
+                        exclude_negative_residuals = FALSE){
   # get PARAFAC spectra
   pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
   # get PARAFAC Emission 'B' mode - emission
@@ -118,12 +120,12 @@ per_eem_ssc <- function(pfmodel,
     # EEM Correction step 1: Removal of fluorescence contribution from non-target components; component spectral overlap correction.
     if(!is.null(spectral_correct)){
       if(spectral_correct == "ex"){
-        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex")
+        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
       } else if(spectral_correct == "em"){
-        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em")
+        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
       } else if(spectral_correct == "all"){
-        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex")
-        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em")
+        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
+        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
       } else {
         stop("Please specify spectral_correct as NULL, 'ex', 'em' or 'all'")
       }

@@ -16,7 +16,8 @@ per_eem_ssc(
   complete_peak = "ex",
   SSC_trim_method = "mod_alpha",
   verbose = FALSE,
-  denormalise_residuals = FALSE
+  denormalise_residuals = FALSE,
+  exclude_negative_residuals = FALSE
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ per_eem_ssc(
 \item{verbose}{TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.}
 
 \item{denormalise_residuals}{TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.}
+
+\item{exclude_negative_residuals}{TRUE/FALSE to set negative values to 0 during component overlap correction. Setting this to TRUE may inflate similarity scores in component:sample comparisons where the model has over-fitted the component.}
 
 \item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
 }
