@@ -126,8 +126,7 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
 #' @noRd
 #'
 extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = parallel::detectCores(logical = FALSE)-1,
-                                denormalise = FALSE, extend_eemlist = TRUE, verbose = FALSE){
-  # pfmodel <- norm2A(pfmodel)
+                                denormalise = FALSE, extend_eemlist = TRUE, verbose = FALSE, force_names = TRUE){
   if (!is.null(select)) {
     eem_list <- eem_extract(eem_list, sample = select, keep = TRUE,
                             verbose = FALSE)
@@ -144,7 +143,11 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
   }
   if (!all(eem_names(eem_list) %in% rownames(pfmodel$A)) |
       length(eem_list) == 0) {
-    pfmodel <- A_missing(eem_list, pfmodel, cores = cores)
+    if(isTRUE(force_names)){
+      rownames(pfmodel$A) <- eem_names(eem_list)
+    } else {
+      pfmodel <- A_missing(eem_list, pfmodel, cores = cores)
+    }
   }
   what <- which(rownames(pfmodel$A) %in% (eem_list %>% eem_names()))
   pfmodel$A <- as.data.frame(pfmodel$A)[what, ]
