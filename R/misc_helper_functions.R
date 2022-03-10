@@ -12,10 +12,11 @@
 #' @param mat2 a matrix
 #' @param tcc TRUE/FALSE to return only TCC value instead of SSC, alpha and beta.
 #' @param alpha_start NULL or a value to set the starting point for peak detection. If a numeric value is supplied, in nanometres, this will be set as the start of the search for the peak position in each spectra. If the value is NULL or NA, the operation is ignored.
+#' @param beta_abs TRUE/FALSE to use the absolute value of both mats when calculating the beta term. This prevents negative values in either mat from reducing the penalty score.
 #'
 #' @noRd
 #'
-ssc_more_int <- function (mat1, mat2, tcc = FALSE, alpha_start = NULL) {
+ssc_more_int <- function (mat1, mat2, tcc = FALSE, alpha_start = NULL, beta_abs = TRUE) {
   if (any(is.null(mat1), is.na(mat1), is.null(mat2), is.na(mat2))) {
     a <- NA
   } else {
@@ -40,7 +41,13 @@ ssc_more_int <- function (mat1, mat2, tcc = FALSE, alpha_start = NULL) {
             # Normal alpha calculation
             alpha <- abs((wl[which.max(col1)] - wl[which.max(col2)])/diff(range(wl)))
           }
-          beta <- abs((sum(col1/max(col1)) - sum(col2/max(col2)))/diff(range(wl)))
+          if(isTRUE(abs_beta)){
+            col2abs <- abs(col2)
+            col1abs <- abs(col1)
+            beta <- abs((sum(col1abs/max(col1abs)) - sum(col2abs/max(col2abs)))/diff(range(wl)))
+          } else {
+            beta <- abs((sum(col1/max(col1)) - sum(col2/max(col2)))/diff(range(wl)))
+          }
           ssc <- tcc_cal - alpha - beta
           ssc <- c(ssc, alpha, beta)
           # rownames(a) <- (c("ssc","alpha","beta"))
