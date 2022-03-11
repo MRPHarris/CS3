@@ -147,10 +147,10 @@ sg_smooth <- function(mat, neg_to_0 = TRUE , p = 2, n = 21,...){
 #' @param tolerance numeric decimal value representing percentage tolerance. 0.05 (5%) by default.
 #' @param verbose TRUE/FALSE to return various messages during operation.
 #' @param return_trough TRUE/FALSE to, instead of a trimmed spectra, return the trough value used to define the start of the trimmed spectra.
-#'
+#' @param skip_allneg TRUE/FALSE to skip spectra that contain only negative values.
 #' @noRd
 #'
-extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE, return_trough = TRUE){
+extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE, return_trough = TRUE, skip_allneg = TRUE){
   # list matrices
   matrices <- list(mat1,mat2) %>%
     'names<-'(c("mat1","mat2"))
@@ -162,8 +162,12 @@ extract_complete_peak <- function(mat1, mat2, tolerance = 0.05, verbose = FALSE,
     'names<-'(c("mat1","mat2"))
   # Skip condition: if the matrix starts with positive gradients, it is skipped. Skipping occurs later by
   # setting the trough value to NA.
+  counterA <- 0
   skip_condition <- lapply(gradient_values, function(x){
+    counterA <- counterA + 1
     if(all(is.na(unlist(x)))){
+      checkval <- TRUE
+    } else if(all(unlist(matrices[counterA]) <= 0) && isTRUE(skip_allneg)){
       checkval <- TRUE
     } else {
       checkval <- x$pos[min(which(!is.na(x$pos)))] < x$neg[min(which(!is.na(x$neg)))]
