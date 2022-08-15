@@ -61,16 +61,6 @@ interpolate_matrix_1nm <- function(mat, mat_out = FALSE){
 #'
 comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
                                       output_mat = TRUE, neg_to_0 = TRUE, add_nontarget = TRUE, bounds = NULL){
-
-  # grob = grob_em
-  # sample_char = name
-  # comp = comp
-  # type = "em"
-  # output_mat = TRUE
-  # neg_to_0 = TRUE
-  # add_nontarget = TRUE
-  # bounds = comp_bounds # the nested list of component bounds
-
   target_comp <- comp
   target_comp_string <- paste0("Comp.", target_comp)
   if(!is.character(sample_char)){

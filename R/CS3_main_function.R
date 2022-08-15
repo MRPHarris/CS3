@@ -46,24 +46,6 @@ per_eem_ssc <- function(pfmodel,
                              denormalise_residuals = FALSE,
                              exclude_negative_residuals = FALSE,
                              constrain_comparison = FALSE){
-
-  # Test vars for intra-function testing
-  # pfmodel = pf_bro_6C[[2]] # under-specified amino acid model
-  # eemlist = bro_amino_acids
-  # comp = 2
-  # tcc = FALSE
-  # modified_metrics = TRUE
-  # spectral_correct = "all"
-  # interp_1nm = "all"
-  # smooth_sg = "all"
-  # complete_peak = "ex"
-  # SSC_trim_method = 'mod_alpha'
-  # verbose = TRUE
-  # denormalise_residuals = FALSE
-  # exclude_negative_residuals = FALSE
-  # constrain_comparison = TRUE
-
-
   # get PARAFAC spectra
   pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
   # get PARAFAC Emission 'B' mode - emission
