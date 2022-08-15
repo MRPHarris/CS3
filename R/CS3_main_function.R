@@ -16,12 +16,13 @@
 #' @param modified_metrics TRUE/FALSE to add the modified (ex + em combined) TCC and SSC metrics after Parr et al., 2014.
 #' @param spectral_correct either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified
 #' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
-#' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra
+#' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra.
 #' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.
 #' @param SSC_trim_method if !is.null(complete_peak), choose one of either 'mod_alpha' to alter the peak position penalty term, or 'trim_spectra' to remove the incomplete peak entirely
 #' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
-#' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.
+#' @param denormalise_residuals TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE. Use if you're supplying a PARAFAC model to the function that was generated with a normalised version of an eemlist, and comparing it with the non-normalised version of said eemlist.
 #' @param exclude_negative_residuals TRUE/FALSE to set negative values to 0 during component overlap correction. Setting this to TRUE may inflate similarity scores in component:sample comparisons where the model has over-fitted the component.
+#' @param constrain_comparison TRUE/FALSE or numeric decimal value between 0 and 1. A percentage threshold is used to identify the 'limit' of a component's fluorescence response, limiting spectral comparisons to within the normalised intensity boundary supplied.
 #'
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
@@ -32,18 +33,37 @@
 #' @export
 #'
 per_eem_ssc <- function(pfmodel,
-                        eemlist,
-                        comp,
-                        tcc = FALSE,
-                        modified_metrics = TRUE,
-                        spectral_correct = "all",
-                        interp_1nm = "all",
-                        smooth_sg = "all",
-                        complete_peak = "ex",
-                        SSC_trim_method = 'mod_alpha',
-                        verbose = FALSE,
-                        denormalise_residuals = FALSE,
-                        exclude_negative_residuals = FALSE){
+                             eemlist,
+                             comp,
+                             tcc = FALSE,
+                             modified_metrics = TRUE,
+                             spectral_correct = "all",
+                             interp_1nm = "all",
+                             smooth_sg = "all",
+                             complete_peak = "ex",
+                             SSC_trim_method = 'mod_alpha',
+                             verbose = FALSE,
+                             denormalise_residuals = FALSE,
+                             exclude_negative_residuals = FALSE,
+                             constrain_comparison = FALSE){
+
+  # Test vars for intra-function testing
+  # pfmodel = pf_bro_6C[[2]] # under-specified amino acid model
+  # eemlist = bro_amino_acids
+  # comp = 2
+  # tcc = FALSE
+  # modified_metrics = TRUE
+  # spectral_correct = "all"
+  # interp_1nm = "all"
+  # smooth_sg = "all"
+  # complete_peak = "ex"
+  # SSC_trim_method = 'mod_alpha'
+  # verbose = TRUE
+  # denormalise_residuals = FALSE
+  # exclude_negative_residuals = FALSE
+  # constrain_comparison = TRUE
+
+
   # get PARAFAC spectra
   pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
   # get PARAFAC Emission 'B' mode - emission
@@ -51,7 +71,7 @@ per_eem_ssc <- function(pfmodel,
   # get PARAFAC Excitation 'C' mode - excitation
   mat_pf_ex_main <- as.matrix(pfmodel$C[,comp])
   # Interpolate PARAFAC spectra, if specified.
-  if(!isTRUE(interp_1nm)){
+  if(!is.null(interp_1nm)){
     if(isTRUE(verbose)){
       message("Interpolating PARAFAC spectra, type: ", interp_1nm)
     }
@@ -86,6 +106,48 @@ per_eem_ssc <- function(pfmodel,
       message("Residuals extracted.")
     }
   }
+  # PARAFAC spectra trimming if using constrain_comparison
+  if(!isFALSE(constrain_comparison)){
+    if(is.numeric(constrain_comparison)){
+      if(constrain_comparison < 1 && constrain_comparison > 0){
+        tol_bounds <- constrain_comparison
+      }else {
+        stop("If supplying a value for constrain_comparison, it must be between 0 and 1.")
+      }
+    } else {
+      tol_bounds <- 0.03
+      message("Percent tolerance for wavelength constraint set to 3% by default.")
+    }
+    loads <- list(mat_pf_ex_main,  mat_pf_em_main)
+    # Generate normalised component modes
+    norm_loads <- lapply(loads, function(x){
+      normload <- data.matrix(x/max(x, na.rm = TRUE))
+      rownames(normload) <- rownames(x)
+      normload
+    })
+    # Generate boundaries
+    comp_bounds <- lapply(norm_loads, function(var, bounds_tol = tol_bounds){
+      wl_start_ind <- as.numeric(min(which(var > bounds_tol)))
+      wl_start <- as.numeric(rownames(var)[min(which(var > bounds_tol))])
+      var_reversed <- data.matrix(var[nrow(var):1,])
+      wl_end_ind <- length(var) - as.numeric(min(which(var_reversed > bounds_tol)))
+      wl_end <- as.numeric(rownames(var)[wl_end_ind])
+      wl <- list(wl_start,wl_end) %>%
+        'names<-'(c('start','end'))
+      ind <- list(wl_start_ind,wl_end_ind) %>%
+        'names<-'(c('start','end'))
+      bnd_list <- list(wl,ind) %>%
+        'names<-'(c('wavelengths','indices'))
+      bnd_list
+    })
+    # Return constrained component matrices
+    mat_pf_ex_main <- mat_pf_ex_main %>% data.frame() %>% rownames_to_column('wavelength') %>%
+      slice(unlist(comp_bounds[[1]][[2]][1]):unlist(comp_bounds[[1]][[2]][2])) %>%
+      column_to_rownames('wavelength') %>% data.matrix()
+    mat_pf_em_main <- mat_pf_em_main %>% data.frame() %>% rownames_to_column('wavelength') %>%
+      slice(unlist(comp_bounds[[2]][[2]][1]):unlist(comp_bounds[[2]][[2]][2])) %>%
+      column_to_rownames('wavelength') %>% data.matrix()
+  }
   # Fill SSC table
   types <- c("tcc","ssc","alpha","beta")
   cats <- c("excitation","emission")
@@ -119,15 +181,28 @@ per_eem_ssc <- function(pfmodel,
       data.matrix()
     # EEM Correction step 1: Removal of fluorescence contribution from non-target components; component spectral overlap correction.
     if(!is.null(spectral_correct)){
-      if(spectral_correct == "ex"){
-        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
-      } else if(spectral_correct == "em"){
-        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
-      } else if(spectral_correct == "all"){
-        mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
-        mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
+      if(!isFALSE(constrain_comparison)){
+        if(spectral_correct == "ex"){
+          mat_ex_it <- comp_correct_spectra_test(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+        } else if(spectral_correct == "em"){
+          mat_em_it <- comp_correct_spectra_test(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+        } else if(spectral_correct == "all"){
+          mat_ex_it <- comp_correct_spectra_test(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+          mat_em_it <- comp_correct_spectra_test(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+        } else {
+          stop("Please specify spectral_correct as NULL, 'ex', 'em' or 'all'")
+        }
       } else {
-        stop("Please specify spectral_correct as NULL, 'ex', 'em' or 'all'")
+        if(spectral_correct == "ex"){
+          mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
+        } else if(spectral_correct == "em"){
+          mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
+        } else if(spectral_correct == "all"){
+          mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals)
+          mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals)
+        } else {
+          stop("Please specify spectral_correct as NULL, 'ex', 'em' or 'all'")
+        }
       }
     }
     # Correction step 2: interpolation to 1nm bandwidth
@@ -198,7 +273,7 @@ per_eem_ssc <- function(pfmodel,
     }
     # Populating SSC table.
     # SSC table handling
-    if(SSC_trim_method == 'trim_peak' || is.null(SSC_trim_method)){
+    if(SSC_trim_method == 'trim_spectra' || is.null(SSC_trim_method)){
       ## Use mats (trimmed or un-trimmed) to find the SSC value.
       ssc_more_em <-  ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE)
       tcc_em <- staRdom::ssc(mat_pf_em, mat_em_it, tcc = TRUE)
