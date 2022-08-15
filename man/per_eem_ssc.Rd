@@ -17,7 +17,8 @@ per_eem_ssc(
   SSC_trim_method = "mod_alpha",
   verbose = FALSE,
   denormalise_residuals = FALSE,
-  exclude_negative_residuals = FALSE
+  exclude_negative_residuals = FALSE,
+  constrain_comparison = FALSE
 )
 }
 \arguments{
@@ -35,7 +36,7 @@ per_eem_ssc(
 
 \item{interp_1nm}{either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction}
 
-\item{smooth_sg}{either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra}
+\item{smooth_sg}{either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra.}
 
 \item{complete_peak}{either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.}
 
@@ -43,9 +44,11 @@ per_eem_ssc(
 
 \item{verbose}{TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.}
 
-\item{denormalise_residuals}{TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE.}
+\item{denormalise_residuals}{TRUE/FALSE to denormalise residuals using the max fluorescence value of the supplied eemlist. Default to FALSE. Use if you're supplying a PARAFAC model to the function that was generated with a normalised version of an eemlist, and comparing it with the non-normalised version of said eemlist.}
 
 \item{exclude_negative_residuals}{TRUE/FALSE to set negative values to 0 during component overlap correction. Setting this to TRUE may inflate similarity scores in component:sample comparisons where the model has over-fitted the component.}
+
+\item{constrain_comparison}{TRUE/FALSE or numeric decimal value between 0 and 1. A percentage threshold is used to identify the 'limit' of a component's fluorescence response, limiting spectral comparisons to within the normalised intensity boundary supplied.}
 
 \item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
 }
