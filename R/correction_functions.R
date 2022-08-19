@@ -74,21 +74,27 @@ comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
   # Get all the types: components, residuals, sample
   types <- unique(grob_sample$type)
   # Which comps are *not* the target?
-  non_target_comps <- types[which(types != target_comp_string & types != 'residual' & types != 'sample')]
-  # Extract spectra for non-target components.
-  non_target_spectra <- grob_sample[(apply(as.data.frame(grob_sample$type), 2, function(r) which(r %in% non_target_comps))),]
-  # Sum them
-  sum_spectra <- non_target_spectra %>%
-    pivot_wider(names_from = type, values_from = value) %>%
-    replace(is.na(.), 0) %>%
-    mutate(combined.spectra = rowSums(across(.cols = 4:(4+length(non_target_comps)-1)))) %>%
-    select(-(4:(4+length(non_target_comps)-1)))
-  # Get the sample spectra
-  sample_spectra <- grob_sample[(apply(as.data.frame(grob_sample$type), 2, function(r) which(r %in% 'sample'))),]
-  # Perform the subtraction.
-  corrected_spectra <- sample_spectra
-  corrected_spectra$value <- sample_spectra$value - sum_spectra$combined.spectra
-
+  # How many elements are there in types which contain 'comp' but are not the target comp?
+  if(length(grep("Comp.", types)) == 1){
+    # Only one component present in grob. Thus, it must be a single component model (or something is awry). Either way, skip overlap correction.
+    sample_spectra <- grob_sample[(apply(as.data.frame(grob_sample$type), 2, function(r) which(r %in% 'sample'))),]
+    corrected_spectra <- sample_spectra
+  } else {
+    non_target_comps <- types[which(types != target_comp_string & types != 'residual' & types != 'sample')]
+    # Extract spectra for non-target components.
+    non_target_spectra <- grob_sample[(apply(as.data.frame(grob_sample$type), 2, function(r) which(r %in% non_target_comps))),]
+    # Sum them
+    sum_spectra <- non_target_spectra %>%
+      pivot_wider(names_from = type, values_from = value) %>%
+      replace(is.na(.), 0) %>%
+      mutate(combined.spectra = rowSums(across(.cols = 4:(4+length(non_target_comps)-1)))) %>%
+      select(-(4:(4+length(non_target_comps)-1)))
+    # Get the sample spectra
+    sample_spectra <- grob_sample[(apply(as.data.frame(grob_sample$type), 2, function(r) which(r %in% 'sample'))),]
+    # Perform the subtraction.
+    corrected_spectra <- sample_spectra
+    corrected_spectra$value <- sample_spectra$value - sum_spectra$combined.spectra
+  }
   if(isTRUE(output_mat)){
     # return a matrix in the same format as that which was imported
     mat <- data.matrix(corrected_spectra$value)

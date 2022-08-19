@@ -134,6 +134,8 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
 #'
 extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = parallel::detectCores(logical = FALSE)-1,
                                 denormalise = FALSE, extend_eemlist = TRUE, verbose = FALSE, force_names = TRUE){
+  ncomps = ncol(pfmodel$A)
+  colnames_pre <- colnames(pfmodel$A)
   if (!is.null(select)) {
     eem_list <- eem_extract(eem_list, sample = select, keep = TRUE,
                             verbose = FALSE)
@@ -157,10 +159,10 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
     }
   }
   what <- which(rownames(pfmodel$A) %in% (eem_list %>% eem_names()))
-  pfmodel$A <- as.data.frame(pfmodel$A)[what, ]
+  pfmodel$A <- as.matrix((pfmodel$A)[what, ]) %>% 'colnames<-'(colnames_pre)
   # building the residuals data. Multiple lapply layers.
   res_data <- lapply(pfmodel$A %>% rownames(), function(sample) {
-    # First, main layer: iterate through each sample.
+    # Lapply over samples
     comps <- lapply(pfmodel$A %>% colnames(), function(component) {
       # Another lapply! Prepare component matrices for this sample.
       s1 <- pfmodel$B[,component] %*% t(pfmodel$C[,component])
