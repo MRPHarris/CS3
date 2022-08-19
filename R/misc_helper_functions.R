@@ -61,7 +61,7 @@ create_MDL_eem <- function(blank_eemlist,
   } else {
     stop("Please supply 'method' as either 'Hansen' or 'Thomsen'")
   }
-  eemlist_avpsd <- list(eemlist_avpsd)
+  eemlist_avpsd <- list(eem_avpsd)
   class(eemlist_avpsd) = c('eemlist')
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
