@@ -161,7 +161,7 @@ create_MQL_eem <- function(blank_eemlist,
     eemlist_avpsd <- list(mq_sd10,mq_average)
     class(eemlist_avpsd) <- c('eemlist')
     eem_avpsd <- eemlist_sum(eemlist_avpsd)
-    eem_avpsd$sample <- c("LT-MDL for method m1")
+    eem_avpsd$sample <- c("LT-MQL for method m1")
   } else if(method == "Thomsen"){
     eem_avpsd <- mq_sd10
   } else {
