@@ -2,6 +2,114 @@
 # Many are adaptations of code from the staRdom package (Pucher et al., 2019).
 # Some others are borrowed from my own package for convenience and to avoid dependency on that package, which I do not plan to list on CRAN: https://github.com/MRPHarris/eemUtils
 
+#' Create an EEM object representing the Long-Term Method Detection Limit LT-MDL
+#'
+#' @description The LT-MDL quantifies a given fluorometer's ability to detect signals
+#'       at specific wavelengths by combining the response of a set of ultrapure water blanks
+#'       run using the same parameters as the method of interest. Two options are available for
+#'       calculating the LT-MDL: the average of a set of ultrapure water blanks plus 3* the standard
+#'       deviation of the blanks (following Hansen et al., 2018), or simply 3* the standard deviation of
+#'       the blanks (following Thomsen et al., 2003).
+#'
+#' @param blank_eemlist an eemlist compliant with the eem/eemR/staRdom framework, containing a set of ultrapure water blank EEMs created using identical measurement parameters.
+#' @param remove_gamma_spikes uses forecast::tsclean to treat each emission scan in the LT-MDL as a time series and remove outliers. This gets rid of single-point scatter artefacts caused by gamma spikes.
+#' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
+#' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
+#' @param method character vector, one of either 'Hansen' or 'Thomsen' corresponding to the two supproted methods for LT-MDL calculation.
+#'
+#' @importFrom staRdom eem_rem_scat
+#' @importFrom parallel detectCores
+#' @importFrom staRdom eem_interp
+#' @importFrom magrittr %>%
+#'
+#' @export
+#'
+create_MDL_eem <- function(blank_eemlist,
+                           remove_gamma_spikes = TRUE,
+                           excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
+                           scatter_widths = c(12,12,10,10),
+                           method = "Hansen"){
+  ## Only Rayleigh excision performed on raw blank data.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    mq_eems_masked <- blank_eemlist %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = width_o1)
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    mq_eems_interp <- eem_interp(mq_eems_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    mq_eems_interp <- blank_eemlist
+  }
+  ### Create average of mq eems
+  mq_average <- unlist(eemlist_average_int(mq_eems_interp), recursive = FALSE) %>% 'class<-'('eem')
+  mq_average$sample <- "MQav"
+  ### Generate 3*the standard deviation.
+  mq_sd3 <- eemlist_sd_int(eemlist = mq_eems_interp, mult = 3)
+  mq_sd3$sample = c("MQsd3")
+  ## Generate the LT-MDL EEM object after Hansen
+  if(method == "Hansen"){
+    eemlist_avpsd <- list(mq_sd3,mq_average)
+    class(eemlist_avpsd) <- c('eemlist')
+    eemlist_avpsd <- eemlist_sum(eemlist_avpsd)
+    eemlist_avpsd$sample <- c("LT-MDL for method m1")
+  } else if(method == "Thomsen"){
+    eemlist_avpsd <- mq_sd3
+    class(eemlist_avpsd) <- c('eemlist')
+  } else {
+    stop("Please supply 'method' as either 'Hansen' or 'Thomsen'")
+  }
+  ## Additional scatter removal steps from LT_MDL.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    eemlist_avpsd_masked <- eemlist_avpsd %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = width_o1)
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    eemlist_avpsd_interp <- eem_interp(eemlist_avpsd_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    eemlist_avpsd_interp <- eemlist_avpsd
+  }
+  ## Raman removal from combined EEM
+  if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
+    message("Removing raman scatter from MDL EEM.")
+    scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
+    scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
+    # ## Apply scatter removal
+    eemlist_avpsd_masked2 <- eemlist_avpsd_interp %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width)
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    eemlist_avpsd_interp2 <- eem_interp(eemlist_avpsd_masked2, type = 1, extend = FALSE, cores = cores)
+  } else {
+    eemlist_avpsd_interp2 <- eemlist_avpsd_interp
+  }
+  ## Collate
+  LT_MDL_m1 <- unlist(eemlist_avpsd_interp2, recursive = FALSE)
+  class(LT_MDL_m1) <- c('eem')
+  ## Gamma ray spike removal
+  if(isTRUE(remove_gamma_spikes)){
+    MDL_lst <- list(LT_MDL_m1)
+    class(MDL_lst) <- 'eemlist'
+    MDL_lst_dn <- eemlist_sp_denoise_int(MDL_lst)
+    LT_MDL_m1 <- unlist(MDL_lst_dn, recursive = FALSE)
+    class(LT_MDL_m1) <- c('eem')
+    LT_MDL_m1
+  } else {
+    LT_MDL_m1
+  }
+}
+
+
+
+
 #' Get SSC along with alpha and beta penalty terms
 #'
 #' @description The shift- and shape sensitive congruence (SSC) was developed by Wunsch et al., 2019 as an improvement
@@ -294,3 +402,213 @@ extrpf_loadings_denorm_int <- function(pfmodel, eemlist, type = "short"){
   }
 }
 
+#' Ensure that wavelengths where Ex > Em are set to 0 when removing 1st-order Rayleigh scattering.
+#'
+#' @description A modification to eemR's scatter removal function that ensures wavelengths proximal to
+#'      the 1st order Rayleigh scatter line where Excitation > Emission are set to 0, ensuring there is
+#'      no impossible fluorescence upon subsequent interpolation over scattering areas.
+#'
+#' @param eem an eem object compliant with the eem/eemR/staRdom framework
+#' @param order integer, either 1 for first order or 2 for second order
+#' @param width width in nm for the scatter excission
+#' @param corr0 logical; TRUE/FALSE; if TRUE, ensures wavelengths where Ex > Em are set to an intensity of 0.
+#'
+#' @noRd
+eem_rayleigh_zero <- function (eem, order = 1, width = 10, corr0 = TRUE){
+  if (class(eem) == "eemlist") {
+    res <- lapply(eem, eem_rayleigh_zero,
+                  order = order, width = width)
+    class(res) <- class(eem)
+    return(res)
+  }
+  x <- eem$x
+  em <- eem$em
+  ex <- eem$ex
+  ind1 <- mapply(function(x) em <= x, order * ex)
+  ind2 <- mapply(function(x) em <= x, order * ex + width)
+  ind3 <- ifelse(ind1 + ind2 == 1, NA, 1)
+  x <- x * ind3
+  if(isTRUE(corr0)){
+    ind4 <- mapply(function(x) em <= x, ex)
+    ind5 <- ifelse(ind4 == 1, 0, 1)
+    x <- x * ind5
+  }
+  res <- eem
+  res$x <- x
+  attributes(res) <- attributes(eem)
+  attr(res, "is_scatter_corrected") <- TRUE
+  class(res) <- class(eem)
+  return(res)
+}
+
+#' A single-point denoiser for long-term method detection and quantification limit EEM objects.
+#'
+#' @description EEMs are often punctuated by isolated, single points of scatter. These are potentially
+#'        caused by a wide range of factors, including gamma-ray spikes. They can severely hamper normalisation
+#'        attempts, and throw off method detection limit calculations. This function provides a simple denoising
+#'        solution using the tsclean function from the forecast package. Data supplied to this function should not
+#'        contain missing values. Borrowed from the package eemUtils.
+#'
+#' @param eemlist A list of EEMs in a format compliant with eemR/staRdom.
+#' @param interp TRUE/FALSE to replace outliers with linear interpolated values instead of NA.
+#'
+#' @importFrom forecast tsclean
+#'
+#' @noRd
+#'
+eemlist_sp_denoise_int <- function(eemlist, interp = TRUE){
+  denoise_eemlist <- lapply(eemlist, function(e){
+    e_df <- as.data.frame(e, gather = FALSE)
+    clean_df <- lapply(e_df, function(ex_wl){
+      wl_clean <- tsclean(ex_wl, replace.missing = interp)
+    }) %>%
+      data.frame() %>%
+      'rownames<-'(rownames(e_df)) %>%
+      'colnames<-'(colnames(e_df))
+    clean_df <- eemdf_to_eem(eemdf = clean_df,
+                             file = e$file,
+                             sample = e$sample,
+                             location = e$location,
+                             gathered = FALSE)
+    clean_df
+  })
+  return(denoise_eemlist)
+}
+
+#' EEM object constructor
+#'
+#' @description borrowed from eemUtils, adapting staRdom's eem_csv importer to turn
+#'        dataframes into eems.
+#'
+#' @param eemdf the dataframe to be coerced to an EEM object.
+#' @param file filename of the EEM, if applicable.
+#' @param sample the samplename of the EEM, if applicable.
+#' @param location the location of the EEM file, if applicable.
+#' @param gathered TRUE/FALSE is the eemdf in a short (not gathered; FALSE) or a long (gathered; TRUE) format?
+#'
+#' @importFrom magrittr %>%
+#' @importFrom tidyr spread
+#' @importFrom dplyr select
+#'
+#' @noRd
+#'
+eemdf_to_eem_int <- function(eemdf,
+                         file = NULL,
+                         sample = NULL,
+                         location = NULL,
+                         gathered = FALSE){
+  # code adapted from staRdom's .eem_csv importer.
+  x <- eemdf
+  if(!isTRUE(gathered)){
+    # The eem is in a short, non-gathered format.
+    ex <- colnames(x)[] %>% as.numeric()
+    em <- rownames(x) %>% as.numeric()
+    x <- x[,] %>% as.matrix() %>% unname()
+    x <- x[!is.na(em),!is.na(ex)]
+    ex <- ex[!is.na(ex)]
+    em <- em[!is.na(em)]
+    l <- list(
+      file = file,
+      sample = sample,
+      x = x,
+      ex = ex,
+      em = em,
+      location = location
+    )
+    class(l) <- "eem"
+    return(l)
+  } else {
+    # The eem is in a long or 'gathered' format.
+    gath_df <- eemdf
+    gath_df$value <- as.numeric(as.character(gath_df$value)) # factor management
+    if("sample" %in% colnames(gath_df)){
+      gath_df <- subset(gath_df, select = -c(sample))
+    }
+    if(colnames(gath_df)[3] == "z"){
+      gath_df_short <- spread(data = gath_df, key = "ex", value = "z")
+    } else {
+      gath_df_short <- spread(data = gath_df, key = "ex", value = "value")
+    }
+    rnames <- as.matrix(gath_df_short[,1])
+    rownames(gath_df_short) <- as.numeric(rnames)
+    gath_df_short <- select(gath_df_short, -c(1))
+    eem <- eemdf_to_eem(eemdf = gath_df_short,
+                        file = file,
+                        sample = sample,
+                        location = location,
+                        gathered = FALSE)
+    return(eem)
+  }
+}
+
+#' Generate standard deviations of an eemlist
+#'
+#' @description Produces an EEM object containing ex/em-pair standard deviations for all eems within the supplied
+#'       eemlist. Borrowed from eemUtils.
+#'
+#' @param eemlist A list of EEMs in a format compliant with eemR/staRdom.
+#' @param mult Numeric; a simple numeric multiplier applied to the resulting ex-em pair sd values.
+#'
+#' @noRd
+#'
+eemlist_sd_int <- function(eemlist, mult = 1){
+  cols <- eemlist[[1]]$ex
+  rows <- eemlist[[1]]$em
+  # Coerce eemlist to sd-operable matrices
+  eemlist_matrices <- lapply(eemlist, function(x){
+    eem_df <- as.data.frame(x, gather = FALSE)
+    eem_df <- as.matrix(eem_df)
+  })
+  # Produce standard deviations
+  sd <- apply(simplify2array(eemlist_matrices), 1:2, sd)
+  # Multiplication handling
+  if(mult != 1){
+    if(!is.numeric(mult)){
+      stop("'mult' must be numeric.")
+    } else {
+      sd <- sd * mult
+    }
+  }
+  sd <- data.frame(sd)
+  colnames(sd) <- cols
+  rownames(sd) <- rows
+  sd_eem <- eemdf_to_eem_int(sd, sample = "eemlist_sd")
+}
+
+#' Average a set of EEMs.
+#'
+#' @description Average the EEMs within an eemlist. Borrowed from eemUtils.
+#'
+#' @param eemlist A list of EEMs, compliant with the eemR/staRdom framework.
+#'
+#' @export
+#'
+eemlist_average_int <- function(eemlist){
+  if(length(eemlist) == 1){
+    message("1 EEM passed to average_eems() for averaging. Returning unchanged.")
+    new_eemlist <- eemlist
+    return(new_eemlist)
+  } else if(length(eemlist) > 1){
+    ungathered_list <- vector(mode = "list",length = length(eemlist))
+    for(i in seq_along(eemlist)){
+      eem_it <- eemlist[[i]]
+      file_it <- eem_it[['file']]
+      sample_it <- eem_it[['sample']]
+      location_it <- eem_it[['location']]
+      eem_ungathered <- as.data.frame(eemlist[[i]], gather = FALSE)       # extract EEM, don't gather
+      ungathered_list[[i]] <- eem_ungathered
+    }
+    # Average it
+    averaged <- Reduce("+",ungathered_list)/length(ungathered_list)
+    # Now back to eem
+    averaged_eem <- eemdf_to_eem_int(averaged,
+                                 file = "",
+                                 sample = "averaged_eem",
+                                 location = "")
+    new_eemlist <- vector(mode = "list",length = 1)
+    class(new_eemlist) <- "eemlist"
+    message(paste0(length(eemlist)," EEMs passed to average_eems() for averaging."))
+    new_eemlist[[1]] <- averaged_eem
+    return(new_eemlist)
+  }
+}
