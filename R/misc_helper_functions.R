@@ -37,7 +37,7 @@ create_MDL_eem <- function(blank_eemlist,
     ## Apply scatter removal
     mq_eems_masked <- blank_eemlist %>%
       eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
-      eem_rayleigh_zero(order = 1, width = width_o1)
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
     ## Interpolate
     cores <- detectCores(logical = FALSE)
     mq_eems_interp <- eem_interp(mq_eems_masked, type = 1, extend = FALSE, cores = cores)
@@ -71,7 +71,7 @@ create_MDL_eem <- function(blank_eemlist,
     ## Apply scatter removal
     eemlist_avpsd_masked <- eemlist_avpsd %>%
       eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
-      eem_rayleigh_zero(order = 1, width = width_o1)
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
     ## Interpolate
     cores <- detectCores(logical = FALSE)
     eemlist_avpsd_interp <- eem_interp(eemlist_avpsd_masked, type = 1, extend = FALSE, cores = cores)
