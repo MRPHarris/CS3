@@ -54,14 +54,15 @@ create_MDL_eem <- function(blank_eemlist,
   if(method == "Hansen"){
     eemlist_avpsd <- list(mq_sd3,mq_average)
     class(eemlist_avpsd) <- c('eemlist')
-    eemlist_avpsd <- eemlist_sum(eemlist_avpsd)
-    eemlist_avpsd$sample <- c("LT-MDL for method m1")
+    eem_avpsd <- eemlist_sum(eemlist_avpsd)
+    eem_avpsd$sample <- c("LT-MDL for method m1")
   } else if(method == "Thomsen"){
-    eemlist_avpsd <- mq_sd3
-    class(eemlist_avpsd) <- c('eemlist')
+    eem_avpsd <- mq_sd3
   } else {
     stop("Please supply 'method' as either 'Hansen' or 'Thomsen'")
   }
+  eemlist_avpsd <- list(eemlist_avpsd)
+  class(eemlist_avpsd) = c('eemlist')
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
     message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
