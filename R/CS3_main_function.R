@@ -165,12 +165,12 @@ per_eem_ssc <- function(pfmodel,
     if(!is.null(spectral_correct)){
       if(!isFALSE(constrain_comparison)){
         if(spectral_correct == "ex"){
-          mat_ex_it <- comp_correct_spectra_test(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+          mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
         } else if(spectral_correct == "em"){
-          mat_em_it <- comp_correct_spectra_test(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+          mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
         } else if(spectral_correct == "all"){
-          mat_ex_it <- comp_correct_spectra_test(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
-          mat_em_it <- comp_correct_spectra_test(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+          mat_ex_it <- comp_correct_spectra(grob = grob_ex, sample_char = name, comp = comp, type = "ex", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
+          mat_em_it <- comp_correct_spectra(grob = grob_em, sample_char = name, comp = comp, type = "em", neg_to_0 = exclude_negative_residuals, bounds = comp_bounds)
         } else {
           stop("Please specify spectral_correct as NULL, 'ex', 'em' or 'all'")
         }
