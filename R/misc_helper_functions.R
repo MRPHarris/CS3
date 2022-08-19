@@ -108,7 +108,111 @@ create_MDL_eem <- function(blank_eemlist,
   }
 }
 
-
+#' Create an EEM object representing the Long-Term Method Quantification Limit LT-MQL
+#'
+#' @description The LT-MQL quantifies a given fluorometer's ability to detect signals
+#'       at specific wavelengths by combining the response of a set of ultrapure water blanks
+#'       run using the same parameters as the method of interest. Two options are available for
+#'       calculating the LT-MQL: the average of a set of ultrapure water blanks plus 10* the standard
+#'       deviation of the blanks (following the implied method of Hansen et al., 2018), or simply 10*
+#'       the standard deviation of the blanks (following Thomsen et al., 2003).
+#'
+#' @param blank_eemlist an eemlist compliant with the eem/eemR/staRdom framework, containing a set of ultrapure water blank EEMs created using identical measurement parameters.
+#' @param remove_gamma_spikes uses forecast::tsclean to treat each emission scan in the LT-MDL as a time series and remove outliers. This gets rid of single-point scatter artefacts caused by gamma spikes.
+#' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
+#' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
+#' @param method character vector, one of either 'Hansen' or 'Thomsen' corresponding to the two supproted methods for LT-MDL calculation.
+#'
+#' @importFrom staRdom eem_rem_scat
+#' @importFrom parallel detectCores
+#' @importFrom staRdom eem_interp
+#' @importFrom magrittr %>%
+#'
+#' @export
+#'
+create_MQL_eem <- function(blank_eemlist,
+                           remove_gamma_spikes = TRUE,
+                           excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
+                           scatter_widths = c(12,12,10,10),
+                           method = "Hansen"){
+  ## Only Rayleigh excision performed on raw blank data.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    mq_eems_masked <- blank_eemlist %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    mq_eems_interp <- eem_interp(mq_eems_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    mq_eems_interp <- blank_eemlist
+  }
+  ### Create average of mq eems
+  mq_average <- unlist(eemlist_average_int(mq_eems_interp), recursive = FALSE) %>% 'class<-'('eem')
+  mq_average$sample <- "MQav"
+  ### Generate 3*the standard deviation.
+  mq_sd10 <- eemlist_sd_int(eemlist = mq_eems_interp, mult = 10)
+  mq_sd10$sample = c("MQsd10")
+  ## Generate the LT-MDL EEM object after Hansen
+  if(method == "Hansen"){
+    eemlist_avpsd <- list(mq_sd10,mq_average)
+    class(eemlist_avpsd) <- c('eemlist')
+    eem_avpsd <- eemlist_sum(eemlist_avpsd)
+    eem_avpsd$sample <- c("LT-MDL for method m1")
+  } else if(method == "Thomsen"){
+    eem_avpsd <- mq_sd10
+  } else {
+    stop("Please supply 'method' as either 'Hansen' or 'Thomsen'")
+  }
+  eemlist_avpsd <- list(eem_avpsd)
+  class(eemlist_avpsd) = c('eemlist')
+  ## Additional scatter removal steps from LT_MDL.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    eemlist_avpsd_masked <- eemlist_avpsd %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    eemlist_avpsd_interp <- eem_interp(eemlist_avpsd_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    eemlist_avpsd_interp <- eemlist_avpsd
+  }
+  ## Raman removal from combined EEM
+  if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
+    message("Removing raman scatter from MDL EEM.")
+    scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
+    scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
+    # ## Apply scatter removal
+    eemlist_avpsd_masked2 <- eemlist_avpsd_interp %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width)
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    eemlist_avpsd_interp2 <- eem_interp(eemlist_avpsd_masked2, type = 1, extend = FALSE, cores = cores)
+  } else {
+    eemlist_avpsd_interp2 <- eemlist_avpsd_interp
+  }
+  ## Collate
+  LT_MDL_m1 <- unlist(eemlist_avpsd_interp2, recursive = FALSE)
+  class(LT_MDL_m1) <- c('eem')
+  ## Gamma ray spike removal
+  if(isTRUE(remove_gamma_spikes)){
+    MDL_lst <- list(LT_MDL_m1)
+    class(MDL_lst) <- 'eemlist'
+    MDL_lst_dn <- eemlist_sp_denoise_int(MDL_lst)
+    LT_MDL_m1 <- unlist(MDL_lst_dn, recursive = FALSE)
+    class(LT_MDL_m1) <- c('eem')
+    LT_MDL_m1
+  } else {
+    LT_MDL_m1
+  }
+}
 
 
 #' Get SSC along with alpha and beta penalty terms
