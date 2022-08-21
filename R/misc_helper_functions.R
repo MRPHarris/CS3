@@ -587,7 +587,7 @@ slice_eem_int <- function(eem, ex, em){
 extrpf_loadings_denorm_int <- function(pfmodel, eemlist, type = "short"){
   maxvals <- eemlist_fmax_values(eemlist)
   fm <- extrpf_loadings(pfmodel)
-  loadings_frame <- fm[,2:ncol(fm)]
+  loadings_frame <- fm[,2:ncol(fm)] %>% as.data.frame()
   newframe <- apply(loadings_frame, 2, function(col) {
     col * maxvals
   }) %>% data.frame()
