@@ -171,12 +171,12 @@ create_background_eem <- function(blank_eemlist,
       eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width)
     ## Interpolate
     cores <- detectCores(logical = FALSE)
-    mq_average_interp2 <- eem_interp(eemlist_avpsd_masked2, type = 1, extend = FALSE, cores = cores)
+    mq_average_interp2 <- eem_interp(mq_average_masked2, type = 1, extend = FALSE, cores = cores)
   } else {
-    eemlist_avpsd_interp2 <- mq_average_interp
+    mq_average_interp2 <- mq_average_interp
   }
   ## Collate
-  background_eem <- unlist(eemlist_avpsd_interp2, recursive = FALSE) %>% 'class<-'(c('eem'))
+  background_eem <- unlist(mq_average_interp2, recursive = FALSE) %>% 'class<-'(c('eem'))
   ## Gamma ray spike removal
   if(isTRUE(remove_gamma_spikes)){
     background_lst <- list(background_eem) %<% 'class<-'(c('eemlist'))
