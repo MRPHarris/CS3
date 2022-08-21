@@ -2,6 +2,7 @@
 
 export(create_MDL_eem)
 export(create_MQL_eem)
+export(create_background_eem)
 export(eemlist_average_int)
 export(per_eem_ssc)
 importFrom(data.table,data.table)

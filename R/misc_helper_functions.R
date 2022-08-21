@@ -108,6 +108,87 @@ create_MDL_eem <- function(blank_eemlist,
   }
 }
 
+
+#' Create an EEM object representing the Long-Term Method Background/Average
+#'
+#' @description Long-term method background (LT-MB) after Hansen et al., 2018.
+#'
+#' @param blank_eemlist an eemlist compliant with the eem/eemR/staRdom framework, containing a set of ultrapure water blank EEMs created using identical measurement parameters.
+#' @param remove_gamma_spikes uses forecast::tsclean to treat each emission scan in the LT-MDL as a time series and remove outliers. This gets rid of single-point scatter artefacts caused by gamma spikes.
+#' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
+#' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
+#'
+#' @importFrom staRdom eem_rem_scat
+#' @importFrom parallel detectCores
+#' @importFrom staRdom eem_interp
+#' @importFrom magrittr %>%
+#'
+#' @export
+#'
+create_background_eem <- function(blank_eemlist,
+                                  remove_gamma_spikes = TRUE,
+                                  excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
+                                  scatter_widths = c(12,12,10,10)){
+  ## Only Rayleigh excision performed on raw blank data.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    mq_eems_masked <- blank_eemlist %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    mq_eems_interp <- eem_interp(mq_eems_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    mq_eems_interp <- blank_eemlist
+  }
+  ### Create average of mq eems
+  mq_average <- eemlist_average_int(mq_eems_interp) %>% 'class<-'(c('eemlist'))
+  ## Additional scatter removal steps from LT_MDL.
+  if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
+    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
+    scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
+    ## Apply scatter removal
+    mq_average_masked <- mq_average %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width) %>%
+      eem_rayleigh_zero(order = 1, width = scatter_widths[3])
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    mq_average_interp <- eem_interp(mq_average_masked, type = 1, extend = FALSE, cores = cores)
+  } else {
+    mq_average_interp <- mq_average
+  }
+  ## Raman removal from combined EEM
+  if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
+    message("Removing raman scatter from MDL EEM.")
+    scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
+    scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
+    # ## Apply scatter removal
+    mq_average_masked2 <- mq_average_interp %>%
+      eem_rem_scat(remove_scatter = scatter, remove_scatter_width = scatter_width)
+    ## Interpolate
+    cores <- detectCores(logical = FALSE)
+    mq_average_interp2 <- eem_interp(eemlist_avpsd_masked2, type = 1, extend = FALSE, cores = cores)
+  } else {
+    eemlist_avpsd_interp2 <- mq_average_interp
+  }
+  ## Collate
+  background_eem <- unlist(eemlist_avpsd_interp2, recursive = FALSE) %>% 'class<-'(c('eem'))
+  ## Gamma ray spike removal
+  if(isTRUE(remove_gamma_spikes)){
+    background_lst <- list(background_eem) %<% 'class<-'(c('eemlist'))
+    background_lst_dn <- eemlist_sp_denoise_int(background_lst)
+    background_eem <- unlist(background_lst_dn, recursive = FALSE)
+    class(background_eem) <- c('eem')
+    background_eem
+  } else {
+    background_eem
+  }
+}
+
 #' Create an EEM object representing the Long-Term Method Quantification Limit LT-MQL
 #'
 #' @description The LT-MQL quantifies a given fluorometer's ability to detect signals
