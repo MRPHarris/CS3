@@ -214,6 +214,103 @@ create_MQL_eem <- function(blank_eemlist,
   }
 }
 
+#' Roughly compare the dimensions of a supplied EEM and a PARAFAC model
+#'
+#' @description Using some basic dimension checks of excitation and emission dimensions,
+#'        compare the size and resolution of an EEM and a PARAFAC model.
+#'
+#' @param pfmodel A PARAFAC model object returned by staRdom::eem_parafac or an equivalent function.
+#' @param eem an EEM object compliant with the eem/eemR/staRdom framework.
+#'
+#' @importFrom magrittr %>%
+#'
+#' @noRd
+#'
+compare_dims_eem_pf <- function(pfmodel, eem){
+  # Init comp table
+  comp_table <- data.frame(matrix(NA,nrow = 4, ncol = 2)) %>%
+    'colnames<-'(c('Category','Pass'))
+  comp_table$Category <- c('excitation bounds','emission bounds','excitation increments','emission increments')
+  # Compare ex bounds
+  if((min(as.numeric(rownames(pfmodel$C))) == min(as.numeric(eem$ex))) &&
+     (max(as.numeric(rownames(pfmodel$C))) == max(as.numeric(eem$ex)))){
+    comp_table$Pass[1] <- TRUE
+  } else {
+    comp_table$Pass[1] <- FALSE
+    #stop("The difference between the emission dimensions of the PARAFAC model and the background/MQL/MDL eem is too great. Trim the EEM.")
+  }
+  # Compare em bounds
+  mindif = abs(round(min(as.numeric(rownames(pfmodel$B)))) - round(min(eem$em)))
+  maxdif = abs(round(max(as.numeric(rownames(pfmodel$B)))) - round(max(eem$em)))
+  if(mindif > 1 || maxdif > 1){
+    comp_table$Pass[2] <- FALSE
+    #stop("The difference between the emission dimensions of the PARAFAC model and the background/MQL/MDL eem is too great. Trim the EEM.")
+  } else {
+    comp_table$Pass[2] <- TRUE
+  }
+  # Compare initial ex divs
+  iexdiv_pf <- as.numeric(rownames(pfmodel$C))[2] - as.numeric(rownames(pfmodel$C))[1]
+  iexdiv_eem <- as.numeric(eem$ex[2]) - as.numeric(eem$ex[1])
+  if(isTRUE(iexdiv_pf - iexdiv_eem != 0)){
+    #stop("The excitation increments between the PARAFAC model and the background/MQL/MDL eem are not the same.")
+    comp_table$Pass[3] <- FALSE
+  } else {
+    comp_table$Pass[3] <- TRUE
+  }
+  # Compare initial ex divs
+  iemdiv_pf <- round(as.numeric(rownames(pfmodel$B))[2] - as.numeric(rownames(pfmodel$B))[1],2)
+  iemdiv_eem <- round(as.numeric(eem$em[2]) - as.numeric(eem$em[1]),2)
+  if(isTRUE(iemdiv_pf - iemdiv_eem != 0)){
+    comp_table$Pass[4] <- FALSE
+    #stop("The emission increments between the PARAFAC model and the background/MQL/MDL are not sufficiently similar.")
+  } else {
+    comp_table$Pass[4] <- TRUE
+  }
+  return(comp_table)
+}
+
+#' Interpolate emission increments of EEM to match a PARAFAC model
+#'
+#' @description Using spline interpolation provided by spline(), interpolate along each emission scan within an EEM
+#'        to match the increments used in a PARAFAC model. Generally only best to perform this function on EEMs that pass
+#'        a rough comparison check, such as that provided by compare_dims_eem_pf.
+#'
+#' @param eem an EEM object compliant with the eem/eemR/staRdom framework.
+#' @param pfmodel A PARAFAC model object returned by staRdom::eem_parafac or an equivalent function.
+#' @param rayleigh1_width numeric value in nm of the width of the 1st order rayleigh line, which is re-masked and interpolated to ensure no intensity values exist at wavelengths where Ex > Em.
+#' @param cores number of cores to use to interpolate missing values.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom staRdom eem_interp
+#'
+#' @noRd
+#'
+conform_eem_to_pf_emvals <- function (eem, pfmodel, rayleigh1_width = 10, cores = parallel::detectCores(logical = FALSE)){
+  # Prep
+  eemdf <- as.data.frame(eem, gather = F)
+  pfdf <- as.data.frame(extrpf_eems(pfmodel)[[1]], gather = F)
+  # Divs em
+  eem_emdivs <- as.numeric(rownames(eemdf))
+  pf_emdivs <- as.numeric(rownames(pfdf))
+  new_eemdf <- lapply(eemdf,function(emscan){
+    div_it <- as.matrix(emscan)
+    rownames(div_it) <- eem_emdivs
+    new_emscan <- do.call(cbind.data.frame, spline(x = eem_emdivs, y = div_it, xout = pf_emdivs))
+    new_emscan <- new_emscan$y
+    new_emscan
+  }) %>%
+    as.data.frame() %>%
+    'rownames<-'(c(pf_emdivs)) %>%
+    'colnames<-'(c(colnames(pfdf))) %>%
+    eemdf_to_eem_int(sample = 'resized_eem')
+  # Ensure no negative values.
+  eeml <- list(new_eemdf) %>% 'class<-'(c('eemlist')) %>%
+    eem_rayleigh_zero(order = 1, width = rayleigh1_width) %>%
+    eem_interp(cores = cores)
+  new_eem <- eeml[[1]] %>% 'class<-'(c('eem'))
+  new_eem
+}
+
 
 #' Get SSC along with alpha and beta penalty terms
 #'
