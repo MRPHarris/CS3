@@ -444,8 +444,8 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
 #'
 extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = parallel::detectCores(logical = FALSE)-1,
                                 denormalise = FALSE, extend_eemlist = TRUE, verbose = FALSE, force_names = TRUE){
-  ncomps = ncol(pfmodel$A)
-  colnames_pre <- colnames(pfmodel$A)
+  cnames <- colnames(pfmodel$A)
+  # pfmodel <- norm2A(pfmodel)
   if (!is.null(select)) {
     eem_list <- eem_extract(eem_list, sample = select, keep = TRUE,
                             verbose = FALSE)
@@ -469,7 +469,8 @@ extrpf_residuals_int <- function(pfmodel, eem_list, select = NULL, cores = paral
     }
   }
   what <- which(rownames(pfmodel$A) %in% (eem_list %>% eem_names()))
-  pfmodel$A <- as.matrix((pfmodel$A)[what, ]) %>% 'colnames<-'(colnames_pre)
+  rnames <- rownames(pfmodel$A)[what]
+  pfmodel$A <- as.matrix((pfmodel$A)[what, ]) %>% 'colnames<-'(c(cnames)) %>% 'rownames<-'(c(rnames))
   # building the residuals data. Multiple lapply layers.
   res_data <- lapply(pfmodel$A %>% rownames(), function(sample) {
     # Lapply over samples
