@@ -179,7 +179,7 @@ create_background_eem <- function(blank_eemlist,
   background_eem <- unlist(mq_average_interp2, recursive = FALSE) %>% 'class<-'(c('eem'))
   ## Gamma ray spike removal
   if(isTRUE(remove_gamma_spikes)){
-    background_lst <- list(background_eem) %<% 'class<-'(c('eemlist'))
+    background_lst <- list(background_eem) %>% 'class<-'(c('eemlist'))
     background_lst_dn <- eemlist_sp_denoise_int(background_lst)
     background_eem <- unlist(background_lst_dn, recursive = FALSE)
     class(background_eem) <- c('eem')
