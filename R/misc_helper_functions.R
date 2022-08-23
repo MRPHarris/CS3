@@ -750,7 +750,7 @@ extrpf_loadings_denorm_int <- function(pfmodel, eemlist, type = "short"){
 #' @param type two types of values are returned. 'fmax' for rescaled loadings (* BC mode maxima after Murphy et al., 2013), or "peakpick" for a per-sample intensity value picked at the BC mode maxima coordinates.
 #' @param denormalise denormalise loadings prior to fmax calculation. Not necessary for peak-picking at the component spectra maxima.
 #'
-#' @export
+#' @noRd
 #'
 extrpf_fmax_int <- function(pfmodel, eemlist, component = NULL, type = "fmax", denormalise = FALSE){
   if(!is.null(component)){
@@ -849,6 +849,7 @@ extrpf_fmax_int <- function(pfmodel, eemlist, component = NULL, type = "fmax", d
 #' @param corr0 logical; TRUE/FALSE; if TRUE, ensures wavelengths where Ex > Em are set to an intensity of 0.
 #'
 #' @noRd
+#'
 eem_rayleigh_zero <- function (eem, order = 1, width = 10, corr0 = TRUE){
   if (class(eem) == "eemlist") {
     res <- lapply(eem, eem_rayleigh_zero,
@@ -1016,7 +1017,7 @@ eemlist_sd_int <- function(eemlist, mult = 1){
 #'
 #' @param eemlist A list of EEMs, compliant with the eemR/staRdom framework.
 #'
-#' @export
+#' @noRd
 #'
 eemlist_average_int <- function(eemlist){
   if(length(eemlist) == 1){
