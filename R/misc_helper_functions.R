@@ -2,6 +2,57 @@
 # Many are adaptations of code from the staRdom package (Pucher et al., 2019).
 # Some others are borrowed from my own package for convenience and to avoid dependency on that package, which I do not plan to list on CRAN: https://github.com/MRPHarris/eemUtils
 
+
+#' Obtain PARAFAC component maxima value within an EEM.
+#'
+#' @description Using the max ex/em wavelength coordinates of a PARAFAC component (maxima),
+#'        obtain the intensity value at those coordinates within an EEM. EEM must be reasonably similar
+#'        to the pfmodel in terms of ex and em bounds, and ex and em divs (i.e. resolution/increments)
+#'
+#' @param eem an EEM object compliant with the EEM/eemR/staRdom framework, matching the pfmodel to a reasonable degree
+#' @param pfmodel a PARAFAC model object. Single output from staRdom::eem_parafac.
+#' @param comp numeric, number of the component to be targeted within the supplied PARAFAC model.
+#'
+#' @importFrom dplyr filter
+#'
+#' @export
+#'
+pfcomp_pickmaxima <- function(eem,
+                              pfmodel,
+                              comp){
+  # Legacy code passing
+  # eem doesn't actually have to be MQL.
+  MQL_eem <- eem
+  # Parse component
+  pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
+  # Get target ex and em
+  target_em <- pf_peak_spectra$max_em[1]
+  target_ex <- pf_peak_spectra$max_ex[1]
+  # EEM picking
+  if(class(MQL_eem) != 'eem'){
+    stop('MQL_eem must be an object of class "eem"')
+  }
+  dimcheck <- compare_dims_eem_pf(pfmodel = pfmodel, eem = MQL_eem)
+  if(!all(dimcheck$Pass)){
+    message("Comparison of pfmodel and background/MQL/MDL EEM:")
+    print(dimcheck)
+    stop("!! PARAFAC model and MQL EEM exhibit ex/em differences, implying a difference in methods. Choose a different EEM, or modify it to match the PARAFAC model.")
+  }
+  # If they are sufficiently similar, but there is a minor difference in emission increments, we can forge ahead:
+  if(!setequal(as.numeric(MQL_eem$em), as.numeric(rownames(pfmodel$B)))){
+    # Interpolate EEM to match PARAFAC model
+    message("Minor mismatch in EEM emission increments. Spline interpolating to match PARAFAC model.")
+    MQL_eem <- conform_eem_to_pf_emvals(MQL_eem, pfmodel)
+    message("Done!")
+  }
+  # Identify LoQ value after Agostino et al., 2021.
+  MQL_eem_match <- as.data.frame(MQL_eem) %>%
+    dplyr::filter(em == target_em, ex == target_ex)
+  LoQ_val <- MQL_eem_match$value
+  # return
+  LoQ_val
+}
+
 #' Create an EEM object representing the Long-Term Method Detection Limit LT-MDL
 #'
 #' @description The LT-MDL quantifies a given fluorometer's ability to detect signals
