@@ -306,6 +306,9 @@ per_eem_ssc <- function(pfmodel,
       # Depending on which spectra may be trimmed.
       if(complete_peak == "ex"){
         ssc_more_ex <- ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE, alpha_start = trough_val_ex)
+        if(any(is.na(mat_em_it))){
+          mat_em_it[is.na(mat_em_it)] <- 0
+        }
         ssc_more_em <-  ssc_more_int(mat_pf_em, mat_em_it, tcc = FALSE)
       } else if(complete_peak == "em"){
         ssc_more_ex <- ssc_more_int(mat_pf_ex, mat_ex_it, tcc = FALSE)
