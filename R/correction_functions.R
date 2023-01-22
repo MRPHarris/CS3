@@ -159,6 +159,7 @@ comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
 sg_smooth <- function(mat, rev_spec = TRUE, neg_to_0 = TRUE, p = 2, n = 21, m = 0, ts = 1){
   # Apply Savitzky-Golay smoother.
   # Reversing spectra as in practice this seems to reduce boundary artefacts at shorter wavelengths
+  mat_init = mat # preserve initial matrix for rownames
   if(isTRUE(rev_spec)){
     mat <- mat[nrow(mat):1,]
   }
@@ -166,7 +167,7 @@ sg_smooth <- function(mat, rev_spec = TRUE, neg_to_0 = TRUE, p = 2, n = 21, m = 
     data.matrix() %>%
     'rownames<-'(c(rownames(mat)))
   if(isTRUE(rev_spec)){
-    mat_smth <- mat_smth[nrow(mat_smth):1,]
+    mat_smth <- mat_smth[nrow(mat_smth):1,] %>% data.matrix() %>% 'rownames<-'(c(rownames(mat_init)))
   }
   if(isTRUE(neg_to_0)){
     mat_smth[1][mat_smth[1] < 0] <- 0
