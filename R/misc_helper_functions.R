@@ -405,7 +405,8 @@ compare_dims_eem_pf <- function(pfmodel, eem){
 #'
 #' @description Using spline interpolation provided by spline(), interpolate along each emission scan within an EEM
 #'        to match the increments used in a PARAFAC model. Generally only best to perform this function on EEMs that pass
-#'        a rough comparison check, such as that provided by compare_dims_eem_pf.
+#'        a rough comparison check, such as that provided by compare_dims_eem_pf. At present this is probably highly inefficient due
+#'        to the need to iterate it over single EEMs.
 #'
 #' @param eem an EEM object compliant with the eem/eemR/staRdom framework.
 #' @param pfmodel A PARAFAC model object returned by staRdom::eem_parafac or an equivalent function.
@@ -434,7 +435,7 @@ conform_eem_to_pf_emvals <- function (eem, pfmodel, rayleigh1_width = 10, cores 
     as.data.frame() %>%
     'rownames<-'(c(pf_emdivs)) %>%
     'colnames<-'(c(colnames(pfdf))) %>%
-    eemdf_to_eem_int(sample = 'resized_eem')
+    eemdf_to_eem_int(sample = eem$sample)
   # Ensure no negative values.
   eeml <- list(new_eemdf) %>% 'class<-'(c('eemlist')) %>%
     eem_rayleigh_zero(order = 1, width = rayleigh1_width) %>%

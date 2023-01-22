@@ -9,6 +9,7 @@ per_eem_ssc(
   eemlist,
   comp,
   MQL_eem = NULL,
+  conform_eems = TRUE,
   denormalise_loadings_MQL = FALSE,
   tcc = FALSE,
   modified_metrics = TRUE,
@@ -58,6 +59,8 @@ per_eem_ssc(
 \item{exclude_negative_residuals}{TRUE/FALSE to set negative values to 0 during component overlap correction. Setting this to TRUE may inflate similarity scores in component:sample comparisons where the model has over-fitted the component.}
 
 \item{constrain_comparison}{TRUE/FALSE or numeric decimal value between 0 and 1. A percentage threshold is used to identify the 'limit' of a component's fluorescence response, limiting spectral comparisons to within the normalised intensity boundary supplied.}
+
+\item{conform_eem}{TRUE/FALSE to attempt to remedy minor dimensional differences between EEMs and the PARAFAC model using spline interpolation. Computationally demanding as EEMs are also re-corrected for first order rayleigh scatter to prevent fluorescence at em < ex wavelengths.}
 
 \item{terms}{TRUE/FALSE to extract the alpha and beta penalty term values alongside SSC}
 }
