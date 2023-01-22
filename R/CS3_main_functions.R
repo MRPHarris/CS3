@@ -17,6 +17,7 @@
 #' @param spectral_correct either NULL, 'all', 'ex', or 'em'. Subtract the loadings of other components from the raw sample spectra of the type specified
 #' @param interp_1nm either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction
 #' @param smooth_sg either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra.
+#' @param reverse_sg TRUE/FALSE to reverse input matrix prior to (and following) the SG smoothing. This may reduce the occurrence of short wavelength boundary artefacts.
 #' @param complete_peak either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.
 #' @param SSC_trim_method if !is.null(complete_peak), choose one of either 'mod_alpha' to alter the peak position penalty term, or 'trim_spectra' to remove the incomplete peak entirely
 #' @param verbose TRUE/FALSE to return various messages during the function's opperation. Useful for error checking or to keep track of how things are proceeding. Only used for spectral correction.
@@ -45,6 +46,7 @@ per_eem_ssc <- function(pfmodel,
                         spectral_correct = "all",
                         interp_1nm = "all",
                         smooth_sg = "all",
+                        reverse_sg = TRUE,
                         complete_peak = "ex",
                         SSC_trim_method = 'mod_alpha',
                         verbose = FALSE,
@@ -238,12 +240,12 @@ per_eem_ssc <- function(pfmodel,
     if(!isTRUE(smooth_sg)){
       data("sg_terms_deftab") # default smoothing terms. Eventually tweakable (I hope)
       if(smooth_sg == "ex"){
-        mat_ex_it <- sg_smooth(mat = mat_ex_it,  n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
+        mat_ex_it <- sg_smooth(mat = mat_ex_it,  rev_spec = reverse_sg, n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
       } else if(smooth_sg == "em"){
-        mat_em_it <- sg_smooth(mat = mat_em_it,  n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
+        mat_em_it <- sg_smooth(mat = mat_em_it,  rev_spec = reverse_sg, n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
       } else if(smooth_sg == "all"){
-        mat_ex_it <- sg_smooth(mat = mat_ex_it,  n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
-        mat_em_it <- sg_smooth(mat = mat_em_it,  n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
+        mat_ex_it <- sg_smooth(mat = mat_ex_it,  rev_spec = reverse_sg, n = sg_terms_deftab['ex','n'], p = sg_terms_deftab['ex','p'], m = sg_terms_deftab['ex','m'], ts = sg_terms_deftab['ex','ts'])
+        mat_em_it <- sg_smooth(mat = mat_em_it,  rev_spec = reverse_sg, n = sg_terms_deftab['em','n'], p = sg_terms_deftab['em','p'], m = sg_terms_deftab['em','m'], ts = sg_terms_deftab['em','ts'])
       } else {
         stop("Please specify smooth_sg as NULL, 'ex', 'em' or 'all'")
       }

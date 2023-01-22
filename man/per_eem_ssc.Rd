@@ -15,6 +15,7 @@ per_eem_ssc(
   spectral_correct = "all",
   interp_1nm = "all",
   smooth_sg = "all",
+  reverse_sg = TRUE,
   complete_peak = "ex",
   SSC_trim_method = "mod_alpha",
   verbose = FALSE,
@@ -43,6 +44,8 @@ per_eem_ssc(
 \item{interp_1nm}{either NULL, 'all', 'ex', or 'em'.  Interpolate spectra to 1nm bandwidths. Recommended. Applied after spectral correction}
 
 \item{smooth_sg}{either NULL, 'all', 'ex', or 'em'. Applies a Savitzky-Golay filter to the data prior to metric calculation. Only recommended if interpolation is performed. Uses signal::sgolay(). Default values are a 2nd order polynomial, n = 21 for emission spectra and n = 11 for excitation spectra.}
+
+\item{reverse_sg}{TRUE/FALSE to reverse input matrix prior to (and following) the SG smoothing. This may reduce the occurrence of short wavelength boundary artefacts.}
 
 \item{complete_peak}{either NULL, 'all', 'ex', or 'em'. Use a gradient detection method to identify incomplete peaks in spectra, and prevent them from interfering with the SSC peak position calculation. Set options with the parameter 'SSC_trim_method'.}
 

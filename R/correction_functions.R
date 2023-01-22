@@ -146,6 +146,7 @@ comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
 #' @description A wrapper for signal::sgolayfilt that incorporates negative value handling.
 #'
 #' @param mat an input data.matrix
+#' @param rev_spec TRUE/FALSE to reverse the input matrix prior (and following) filter calculation. May reduce short-wavelength boundary artefacts.
 #' @param neg_to_0 TRUE/FALSE to set negative values to 0. Defaults to true
 #' @param p filter order. See ?signal::sgolayfilt
 #' @param n window filter size (must be odd). See ?signal::sgolayfilt
@@ -155,11 +156,18 @@ comp_correct_spectra <- function(grob = NULL, sample_char, comp, type = "ex",
 #'
 #' @noRd
 #'
-sg_smooth <- function(mat, neg_to_0 = TRUE , p = 2, n = 21,...){
+sg_smooth <- function(mat, rev_spec = TRUE, neg_to_0 = TRUE, p = 2, n = 21, m = 0, ts = 1){
   # Apply Savitzky-Golay smoother.
-  mat_smth <- sgolayfilt(mat, p = p, n = n,...) %>%
+  # Reversing spectra as in practice this seems to reduce boundary artefacts at shorter wavelengths
+  if(isTRUE(rev_spec)){
+    mat <- mat[nrow(mat):1,]
+  }
+  mat_smth <- sgolayfilt(mat, p = p, n = n, m = m, ts = 1) %>%
     data.matrix() %>%
     'rownames<-'(c(rownames(mat)))
+  if(isTRUE(rev_spec)){
+    mat_smth <- mat_smth[nrow(mat_smth):1,]
+  }
   if(isTRUE(neg_to_0)){
     mat_smth[1][mat_smth[1] < 0] <- 0
   }
