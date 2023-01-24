@@ -12,6 +12,7 @@
 #' @param eem an EEM object compliant with the EEM/eemR/staRdom framework, matching the pfmodel to a reasonable degree
 #' @param pfmodel a PARAFAC model object. Single output from staRdom::eem_parafac.
 #' @param comp numeric, number of the component to be targeted within the supplied PARAFAC model.
+#' @param force_correct TRUE/FALSE to attempt to coerce the EEM to be the same dimensions/bandwidth spacing as the PARAFAC model using spline interpolation.
 #'
 #' @importFrom dplyr filter
 #'
@@ -19,7 +20,8 @@
 #'
 pfcomp_pickmaxima <- function(eem,
                               pfmodel,
-                              comp){
+                              comp,
+                              force_correct = F){
   # Legacy code passing
   # eem doesn't actually have to be MQL.
   MQL_eem <- eem
@@ -36,7 +38,13 @@ pfcomp_pickmaxima <- function(eem,
   if(!all(dimcheck$Pass)){
     message("Comparison of pfmodel and background/MQL/MDL EEM:")
     print(dimcheck)
-    stop("!! PARAFAC model and MQL EEM exhibit ex/em differences, implying a difference in methods. Choose a different EEM, or modify it to match the PARAFAC model.")
+    if(isTRUE(force_correct)){
+      message("Mismatch in background/MQL/MDL emission increments. Spline interpolating to match PARAFAC model.")
+      MQL_eem <- conform_eem_to_pf_emvals(MQL_eem, pfmodel)
+      message("Done!")
+    } else {
+      stop("!! PARAFAC model and MQL EEM exhibit ex/em differences, implying a difference in methods. Choose a different EEM, or modify it to match the PARAFAC model.")
+    }
   }
   # If they are sufficiently similar, but there is a minor difference in emission increments, we can forge ahead:
   if(!setequal(as.numeric(MQL_eem$em), as.numeric(rownames(pfmodel$B)))){
