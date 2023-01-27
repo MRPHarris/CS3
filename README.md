@@ -4,12 +4,13 @@
 Current main branch version: 0.1.1
 
 CS3 is a work-in-progress package to facilitate straightforward PARAFAC
-model verification.
+model verification, building on the R fluorescence framework provided by
+the EEM, eemR, and staRdom packages.
 
 Code relates to the manuscript titled *Component-vs-sample similarity as
 a diagnostic tool for inadequate model fitting in EEM-PARAFAC analysis.*
 
-The current github repo is <https://github.com/MRPHarris/CS3>
+The current github repo is <https://github.com/MRPHarris/CS3>.
 
 ### Package framework
 

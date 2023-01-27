@@ -1,6 +1,6 @@
 Package: CS3
 Title: Component versus Sample Spectral Similarity for EEM-PARAFAC model verification
-Version: 0.1.1
+Version: 0.1.1.9001
 Authors@R: 
     person(given = "Matthew",
            family = "Harris",
@@ -25,4 +25,4 @@ Depends:
   R (>= 3.1),
   staRdom (>= 1.1.23)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
