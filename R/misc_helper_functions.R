@@ -13,15 +13,18 @@
 #' @param pfmodel a PARAFAC model object. Single output from staRdom::eem_parafac.
 #' @param comp numeric, number of the component to be targeted within the supplied PARAFAC model.
 #' @param force_correct TRUE/FALSE to attempt to coerce the EEM to be the same dimensions/bandwidth spacing as the PARAFAC model using spline interpolation.
+#' @param complete_peak_ex TRUE/FALSE to use the gradient method to find the max intensity (i.e. peak) following the removal of an incomplete peak. Ex only.
 #'
 #' @importFrom dplyr filter
 #'
 #' @export
 #'
+
 pfcomp_pickmaxima <- function(eem,
                               pfmodel,
                               comp,
-                              force_correct = F){
+                              force_correct = FALSE,
+                              complete_peak_ex = FALSE){
   # Legacy code passing
   # eem doesn't actually have to be MQL.
   MQL_eem <- eem
@@ -30,6 +33,12 @@ pfcomp_pickmaxima <- function(eem,
   # Get target ex and em
   target_em <- pf_peak_spectra$max_em[1]
   target_ex <- pf_peak_spectra$max_ex[1]
+  # Incomplete peak trimmming
+  if(isTRUE(complete_peak_ex)){
+    target_excomp <- as.matrix(pfmodel$C[,comp])
+    complete_ex <- extract_complete_peak(target_excomp,target_excomp, return_trough = F) # gradient peak trimming.
+    target_ex <- as.numeric(rownames(complete_ex$mat1)[which(complete_ex$mat1 == max(complete_ex$mat1))])
+  }
   # EEM picking
   if(class(MQL_eem) != 'eem'){
     stop('MQL_eem must be an object of class "eem"')
