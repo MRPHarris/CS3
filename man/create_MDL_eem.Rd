@@ -9,7 +9,8 @@ create_MDL_eem(
   remove_gamma_spikes = TRUE,
   excise_scatter = c(TRUE, TRUE, TRUE, TRUE),
   scatter_widths = c(12, 12, 10, 10),
-  method = "Hansen"
+  method = "Hansen",
+  verbose = TRUE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ create_MDL_eem(
 \item{scatter_widths}{four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.}
 
 \item{method}{character vector, one of either 'Hansen' or 'Thomsen' corresponding to the two supproted methods for LT-MDL calculation.}
+
+\item{verbose}{TRUE/FALSE to display messages at each correction step.}
 }
 \description{
 The LT-MDL quantifies a given fluorometer's ability to detect signals

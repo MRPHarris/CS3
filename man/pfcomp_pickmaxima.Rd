@@ -4,7 +4,13 @@
 \alias{pfcomp_pickmaxima}
 \title{Obtain PARAFAC component maxima value within an EEM.}
 \usage{
-pfcomp_pickmaxima(eem, pfmodel, comp, force_correct = F)
+pfcomp_pickmaxima(
+  eem,
+  pfmodel,
+  comp,
+  force_correct = FALSE,
+  complete_peak_ex = FALSE
+)
 }
 \arguments{
 \item{eem}{an EEM object compliant with the EEM/eemR/staRdom framework, matching the pfmodel to a reasonable degree}
@@ -14,6 +20,8 @@ pfcomp_pickmaxima(eem, pfmodel, comp, force_correct = F)
 \item{comp}{numeric, number of the component to be targeted within the supplied PARAFAC model.}
 
 \item{force_correct}{TRUE/FALSE to attempt to coerce the EEM to be the same dimensions/bandwidth spacing as the PARAFAC model using spline interpolation.}
+
+\item{complete_peak_ex}{TRUE/FALSE to use the gradient method to find the max intensity (i.e. peak) following the removal of an incomplete peak. Ex only.}
 }
 \description{
 Using the max ex/em wavelength coordinates of a PARAFAC component (maxima),

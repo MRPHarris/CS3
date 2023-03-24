@@ -8,7 +8,8 @@ create_background_eem(
   blank_eemlist,
   remove_gamma_spikes = TRUE,
   excise_scatter = c(TRUE, TRUE, TRUE, TRUE),
-  scatter_widths = c(12, 12, 10, 10)
+  scatter_widths = c(12, 12, 10, 10),
+  verbose = TRUE
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ create_background_eem(
 \item{excise_scatter}{four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.}
 
 \item{scatter_widths}{four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.}
+
+\item{verbose}{TRUE/FALSE to display messages at each correction step.}
 }
 \description{
 Long-term method background (LT-MB) after Hansen et al., 2018.
