@@ -117,7 +117,7 @@ create_MDL_eem <- function(blank_eemlist,
     mq_eems_interp <- blank_eemlist
   }
   ### Create average of mq eems
-  mq_average <- unlist(eemlist_average_int(mq_eems_interp), recursive = FALSE) %>% 'class<-'('eem')
+  mq_average <- unlist(eemlist_average_int(mq_eems_interp, verbose = verbose), recursive = FALSE) %>% 'class<-'('eem')
   mq_average$sample <- "MQav"
   ### Generate 3*the standard deviation.
   mq_sd3 <- eemlist_sd_int(eemlist = mq_eems_interp, mult = 3)
@@ -225,7 +225,7 @@ create_background_eem <- function(blank_eemlist,
     mq_eems_interp <- blank_eemlist
   }
   ### Create average of mq eems
-  mq_average <- eemlist_average_int(mq_eems_interp) %>% 'class<-'(c('eemlist'))
+  mq_average <- eemlist_average_int(mq_eems_interp, verbose = verbose) %>% 'class<-'(c('eemlist'))
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
     if(isTRUE(verbose)){
@@ -320,7 +320,7 @@ create_MQL_eem <- function(blank_eemlist,
     mq_eems_interp <- blank_eemlist
   }
   ### Create average of mq eems
-  mq_average <- unlist(eemlist_average_int(mq_eems_interp), recursive = FALSE) %>% 'class<-'('eem')
+  mq_average <- unlist(eemlist_average_int(mq_eems_interp, verbose = verbose), recursive = FALSE) %>% 'class<-'('eem')
   mq_average$sample <- "MQav"
   ### Generate 3*the standard deviation.
   mq_sd10 <- eemlist_sd_int(eemlist = mq_eems_interp, mult = 10)
@@ -1061,9 +1061,12 @@ eemlist_sd_int <- function(eemlist, mult = 1){
 #'
 #' @noRd
 #'
-eemlist_average_int <- function(eemlist){
+eemlist_average_int <- function(eemlist,
+                                verbose = TRUE){
   if(length(eemlist) == 1){
-    message("1 EEM passed to average_eems() for averaging. Returning unchanged.")
+    if(isTRUE(verbose)){
+      message("1 EEM passed to average_eems() for averaging. Returning unchanged.")
+    }
     new_eemlist <- eemlist
     return(new_eemlist)
   } else if(length(eemlist) > 1){
@@ -1085,7 +1088,9 @@ eemlist_average_int <- function(eemlist){
                                  location = "")
     new_eemlist <- vector(mode = "list",length = 1)
     class(new_eemlist) <- "eemlist"
-    message(paste0(length(eemlist)," EEMs passed to average_eems() for averaging."))
+    if(!isTRUE(verbose)){
+      message(paste0(length(eemlist)," EEMs passed to average_eems() for averaging."))
+    }
     new_eemlist[[1]] <- averaged_eem
     return(new_eemlist)
   }
