@@ -84,6 +84,7 @@ pfcomp_pickmaxima <- function(eem,
 #' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
 #' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
 #' @param method character vector, one of either 'Hansen' or 'Thomsen' corresponding to the two supproted methods for LT-MDL calculation.
+#' @param verbose TRUE/FALSE to display messages at each correction step.
 #'
 #' @importFrom staRdom eem_rem_scat
 #' @importFrom parallel detectCores
@@ -96,10 +97,13 @@ create_MDL_eem <- function(blank_eemlist,
                            remove_gamma_spikes = TRUE,
                            excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
                            scatter_widths = c(12,12,10,10),
-                           method = "Hansen"){
+                           method = "Hansen",
+                           verbose = TRUE){
   ## Only Rayleigh excision performed on raw blank data.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    if(isTRUE(verbose)){
+      message("Removing Rayleigh scatter of specified orders from blank eems.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -133,7 +137,9 @@ create_MDL_eem <- function(blank_eemlist,
   class(eemlist_avpsd) = c('eemlist')
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -148,7 +154,9 @@ create_MDL_eem <- function(blank_eemlist,
   }
   ## Raman removal from combined EEM
   if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
-    message("Removing raman scatter from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Removing raman scatter from MDL EEM.")
+    }
     scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
     scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
     # ## Apply scatter removal
@@ -185,6 +193,7 @@ create_MDL_eem <- function(blank_eemlist,
 #' @param remove_gamma_spikes uses forecast::tsclean to treat each emission scan in the LT-MDL as a time series and remove outliers. This gets rid of single-point scatter artefacts caused by gamma spikes.
 #' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
 #' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
+#' @param verbose TRUE/FALSE to display messages at each correction step.
 #'
 #' @importFrom staRdom eem_rem_scat
 #' @importFrom parallel detectCores
@@ -196,10 +205,13 @@ create_MDL_eem <- function(blank_eemlist,
 create_background_eem <- function(blank_eemlist,
                                   remove_gamma_spikes = TRUE,
                                   excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
-                                  scatter_widths = c(12,12,10,10)){
+                                  scatter_widths = c(12,12,10,10),
+                                  verbose = TRUE){
   ## Only Rayleigh excision performed on raw blank data.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    if(isTRUE(verbose)){
+      message("Removing Rayleigh scatter of specified orders from blank eems.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -216,7 +228,9 @@ create_background_eem <- function(blank_eemlist,
   mq_average <- eemlist_average_int(mq_eems_interp) %>% 'class<-'(c('eemlist'))
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -231,7 +245,9 @@ create_background_eem <- function(blank_eemlist,
   }
   ## Raman removal from combined EEM
   if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
-    message("Removing raman scatter from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Removing raman scatter from MDL EEM.")
+    }
     scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
     scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
     # ## Apply scatter removal
@@ -271,6 +287,7 @@ create_background_eem <- function(blank_eemlist,
 #' @param excise_scatter four logical inputs, e.g. c(TRUE,TRUE,TRUE,TRUE). Passed to staRdom::eem_rem_scat. See ?staRdom::eem_rem_scat for more information.
 #' @param scatter_widths four numeric inputs, specifying the width, in nm, of scatter excissions. See ?staRdom::eem_rem_scat.
 #' @param method character vector, one of either 'Hansen' or 'Thomsen' corresponding to the two supproted methods for LT-MDL calculation.
+#' @param verbose TRUE/FALSE to display messages at each correction step.
 #'
 #' @importFrom staRdom eem_rem_scat
 #' @importFrom parallel detectCores
@@ -283,10 +300,13 @@ create_MQL_eem <- function(blank_eemlist,
                            remove_gamma_spikes = TRUE,
                            excise_scatter = c(TRUE,TRUE,TRUE,TRUE),
                            scatter_widths = c(12,12,10,10),
-                           method = "Hansen"){
+                           method = "Hansen",
+                           verbose = TRUE){
   ## Only Rayleigh excision performed on raw blank data.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Removing Rayleigh scatter of specified orders from blank eems.")
+    if(isTRUE(verbose)){
+      message("Removing Rayleigh scatter of specified orders from blank eems.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -320,7 +340,9 @@ create_MQL_eem <- function(blank_eemlist,
   class(eemlist_avpsd) = c('eemlist')
   ## Additional scatter removal steps from LT_MDL.
   if((excise_scatter[3] == TRUE) || (excise_scatter[4] == TRUE)){
-    message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Ensuring Rayleigh scatter of specified orders removed from MDL EEM.")
+    }
     scatter <- c(FALSE, FALSE, excise_scatter[3], excise_scatter[4])
     scatter_width <- c(0,0,scatter_widths[3],scatter_widths[4])
     ## Apply scatter removal
@@ -335,7 +357,9 @@ create_MQL_eem <- function(blank_eemlist,
   }
   ## Raman removal from combined EEM
   if((excise_scatter[1] == TRUE) || (excise_scatter[2] == TRUE)){
-    message("Removing raman scatter from MDL EEM.")
+    if(isTRUE(verbose)){
+      message("Removing raman scatter from MDL EEM.")
+    }
     scatter <- c(excise_scatter[1], excise_scatter[2], FALSE, FALSE)
     scatter_width <- c(scatter_widths[1],scatter_widths[2],0,0)
     # ## Apply scatter removal
