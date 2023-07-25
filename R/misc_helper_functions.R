@@ -588,8 +588,11 @@ extrpf_peak_spectra_int <- function(pfmodel, component = 1){
     mutate(exn = ifelse(em == max_em, ex, NA), emn = ifelse(ex == max_ex, em, NA)) %>%
     dplyr::filter(!is.na(emn) | !is.na(exn)) %>%
     ungroup() %>%
-    mutate_at(vars(ex, em, value, comp), as.numeric) %>%
-    dplyr::filter(comp == component)
+    mutate_at(vars(ex, em, value, comp), as.numeric)
+  if(!is.null(component)){
+    comp_spectra <- comp_spectra %>%
+      dplyr::filter(comp == component)
+  }
   comp_spectra
 }
 
@@ -1094,4 +1097,28 @@ eemlist_average_int <- function(eemlist,
     new_eemlist[[1]] <- averaged_eem
     return(new_eemlist)
   }
+}
+
+#' Initialise an SSC table
+#'
+#' @description create an empty SSC table using vars specific to the eemlist and higher-level function options.
+#'
+#' @param eemlist A list of EEMs, compliant with the eemR/staRdom framework.
+#' @param modified_metrics TRUE/FALSE to include modified metrics
+#'
+#' @noRd
+#'
+init_ssc_table <- function(eemlist,
+                           modified_metrics){
+  types <- c("tcc","ssc","alpha","beta")
+  cats <- c("excitation","emission")
+  types_pst <- paste(rep(cats, each = length(types)), types, sep = "_")
+  SSC_table <- data.frame(matrix(NA, nrow = length(eemlist), ncol = length(types_pst)))
+  colnames(SSC_table) <- types_pst
+  if(isTRUE(modified_metrics)){
+    SSC_table$mSSC <- NA
+    SSC_table$mTCC <- NA
+  }
+  SSC_table$sample <- unlist(lapply(eemlist,"[[","sample"))
+  SSC_table
 }
