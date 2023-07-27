@@ -39,7 +39,7 @@
 
 per_eem_ssc <- function(pfmodel,
                         eemlist,
-                        comp,
+                        comp = NULL,
                         MQL_eem = NULL,
                         conform_eems = TRUE,
                         denormalise_loadings_MQL = FALSE,
@@ -51,7 +51,7 @@ per_eem_ssc <- function(pfmodel,
                         reverse_sg = TRUE,
                         complete_peak = "ex",
                         SSC_trim_method = 'mod_alpha',
-                        verbose = FALSE,
+                        verbose = TRUE,
                         denormalise_residuals = FALSE,
                         exclude_negative_residuals = FALSE,
                         constrain_comparison = FALSE){
@@ -186,9 +186,9 @@ per_eem_ssc <- function(pfmodel,
     # get PARAFAC spectra
     pf_peak_spectra <- extrpf_peak_spectra_int(pfmodel, component = comp)
     # get PARAFAC Emission 'B' mode - emission
-    mat_pf_em_main <- as.matrix(pfmodel$B[,comp])
+    mat_pf_em_main <- as.matrix(pf_comp_mats[[c]]$em)
     # get PARAFAC Excitation 'C' mode - excitation
-    mat_pf_ex_main <- as.matrix(pfmodel$C[,comp])
+    mat_pf_ex_main <- as.matrix(pf_comp_mats[[c]]$ex)
     # Get component peak coordinates
     target_em <- pf_peak_spectra$max_em[1]
     target_ex <- pf_peak_spectra$max_ex[1]
