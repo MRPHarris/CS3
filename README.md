@@ -1,7 +1,7 @@
 
 # Component versus Sample Spectral Similarity (CS3) in R
 
-Current main branch version: 0.1.1
+Current main branch version: 0.1.1 Current dev branch verison: 0.1.2
 
 CS3 is a work-in-progress package to facilitate straightforward PARAFAC
 model verification, building on the R fluorescence framework provided by
@@ -14,10 +14,14 @@ The current github repo is <https://github.com/MRPHarris/CS3>.
 
 ### Package framework
 
-A single function is exported from this package, `per_eem_ssc`. This
-function compares a PARAFAC component with constituent EEM spectra at
-the target component peak wavelength position. Four corrections are
-optionally applied during this operation:
+This package operates almost entirely around a single function,
+`per_eem_ssc`. This function compares one or more PARAFAC components
+with constituent EEM spectra at the target component peak wavelength
+position. This provides a way to meaningfully evaluate the way in which
+a PARAFAC model minimises residuals on a per-component basis. It is
+particularly useful at diagnosing under-fitting.
+
+Four corrections are applied during this operation:
 
 1)  Spectral correction. During spectral correction, the contribution
     from non-target components is subtracted from the sample spectra
