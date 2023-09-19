@@ -1,14 +1,20 @@
 
 # Component versus Sample Spectral Similarity (CS3) in R
 
-Current main branch version: 0.1.1 Current dev branch verison: 0.1.2
+Current main branch version: 0.1.2
 
-CS3 is a work-in-progress package to facilitate straightforward PARAFAC
-model verification, building on the R fluorescence framework provided by
-the EEM, eemR, and staRdom packages.
+Current dev branch verison: 0.1.2
 
-Code relates to the manuscript titled *Component-vs-sample similarity as
-a diagnostic tool for inadequate model fitting in EEM-PARAFAC analysis.*
+The CS3 package is an implementation of the Component-Versus-Sample
+Spectral Similarity (CS3) method for three-dimensional fluorescence
+modelling verification for the R statistical programming langauge. The
+goal of the package is to facilitate intuitive Parallel Factor Analysis
+(PARAFAC) model validation, building upon the R fluorescence framework
+provided by the EEM, eemR, and staRdom packages.
+
+All code relates to the manuscript currently under review in *Analytical
+Methods* titled *CS3: a new diagnostic tool for EEM-PARAFAC component
+superposition in environmental fluorescence spectroscopy.*
 
 The current github repo is <https://github.com/MRPHarris/CS3>.
 
@@ -19,7 +25,8 @@ This package operates almost entirely around a single function,
 with constituent EEM spectra at the target component peak wavelength
 position. This provides a way to meaningfully evaluate the way in which
 a PARAFAC model minimises residuals on a per-component basis. It is
-particularly useful at diagnosing under-fitting.
+particularly useful at diagnosing under-fitting, as it is sensitive to
+the presence of residuals sharing the EEM space of a component.
 
 Four corrections are applied during this operation:
 
@@ -60,15 +67,46 @@ model is falling down. Are there specific samples where the model and
 sample similarity falls apart? Why might this be? Is spectral averaging
 occurring; are more components required?
 
+### Method limit handling
+
+Three functions are included that can be used to create method limit
+(background, detection, and quantification limits) EEM objects. Pure
+water blank EEM measurements associated with a given instrument
+configuration can be supplied to these functions to create an object of
+the desired type. These objects can also be passed to the `per_eem_ssc`
+function to optionally exclude samples returning a below-threshold (LoQ,
+MDL, AB) intensity for a target component. This can reduce the influence
+of noise on similarity scores, creating a more valid measure of
+component superposition.
+
+### Per-component and per-model scores
+
+The `per_eem_ssc` function will produce a data frame of similarity
+scores for a given component across all samples. When a multi-component
+PARAFAC model is supplied, each component will be analysed and the
+results nested within a list, each list element corresponding to a
+component. The function `combined_pessc_scores` can be supplied with one
+of these data frames to produce a whole-component score, with an option
+to exclude samples exhibiting an intensity beneath that component’s LoQ
+(to use this functionality, an LoQ object must be supplied to
+`per_eem_ssc` for score generation). The investigator can perform this
+operation for all component results for a given model (e.g., iterate
+along list elements returned by `per_eem_ssc`), then take the mean of
+the resulting scores to derive a whole-model similarity score.
+Whole-model scores will typically reach a plateau once optimal
+decomposition is achieved in test-case datasets - however, this
+behaviour may not translate to more dynamic and complex EEM datasets.
+
 ### Using the package
 
 The `per_eem_ssc` only requires two things: a PARAFAC model object,
 returned from `staRdom::eem_parafac()`, and the eemlist used to generate
-the model. The eemlist must be compliant with the staRdom/EEM/eemR
-fluorescence framework for R (see Pucher et al., 2019). Supply these
-parameters to the function, and you’re good to go. It is recommended
-that the function be run repeatedly with and without correction
-parameters in order to compare the results.
+the model. An optional (and recommended) addition is to create a
+quantification limit EEM object from the blanks accompanying the EEM
+dataset, supplied to `create_MQL_EEM`. The eemlist/s must be compliant
+with the staRdom/EEM/eemR fluorescence framework for R (see Pucher et
+al., 2019). Supply these parameters to the main function, and you’re
+good to go.
 
 ### A note on code from Murphy (2011) for gradient peak detection
 
@@ -86,7 +124,10 @@ The function was then extracted from drEEM in MATLAB using \<open
 RamanIntegrationRange.m\> Code was then ported to R, using equivalent
 commands. e.g. forecast::ma() instead of smooth(). Where it was
 possible, functions that preserved the ‘style’ of the code were used.
-E.g. discrete numerical gradient with `pracma::gradient()`
+E.g. discrete numerical gradient with `pracma::gradient()`. The internal
+(non-exported) function `get_gradient_vals` can be found in R -\>
+gradient_helper_functions, and is responsible for discrete gradient data
+generation.
 
 #### References
 
@@ -103,3 +144,9 @@ Wünsch, U. J., Bro, R., Stedmon, C. A., Wenig, P., & Murphy, K. R.
 (2019). Emerging patterns in the global distribution of dissolved
 organic matter fluorescence. Analytical Methods, 11(7), 888–893.
 <https://doi.org/10.1039/C8AY02422G>
+
+Agostino A., Rao N. R. H., Paul S., Zhang, Z., Leslie, G., Le-Clech, P.,
+Henderson, R. (2021). Polymer leachates emulate naturally derived
+fluorescent dissolved organic matter: Understanding and managing sample
+container interferences. Water Research, 204.
+<https://doi.org/10.1016/j.watres.2021.117614>
