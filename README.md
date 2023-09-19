@@ -6,8 +6,8 @@ Current main branch version: 0.1.2
 Current dev branch verison: 0.1.2
 
 The CS3 package is an implementation of the Component-Versus-Sample
-Spectral Similarity (CS3) method for three-dimensional fluorescence
-modelling verification for the R statistical programming langauge. The
+Spectral Similarity (CS3) approach for three-dimensional fluorescence (Excitation-Emission Matrix; EEM)
+model verification in the R statistical programming langauge. The
 goal of the package is to facilitate intuitive Parallel Factor Analysis
 (PARAFAC) model validation, building upon the R fluorescence framework
 provided by the EEM, eemR, and staRdom packages.
